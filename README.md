@@ -1,6 +1,6 @@
 # MA-DAPT
 
-An applicaiotn to visulate tensile test data
+An application to visulate tensile test data with an easy to use GUI
 
 
 ## FEATURES TO ADD
@@ -21,6 +21,7 @@ An applicaiotn to visulate tensile test data
 - Fix names
 - Fix button positions
 - Add icon
+- See if they are better options for gui or a better way to organize them
 
 ### Testing 
 - Calculation tab maynot give proper results. More testing needed to find all issues
