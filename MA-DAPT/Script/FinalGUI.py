@@ -1,0 +1,905 @@
+# %% [markdown]
+# # TODO
+# 
+# 
+# - Create file to store addresses
+# - Add option to change addresses in gui
+# - Add settings tab if they are any other settings
+# - Remake comparison fracture function
+
+
+# 
+# 
+ #use crtl+k crtl+c to comment out and crtl+k crtl+u to uncomment
+
+import io
+import tkinter as tk
+from tkinter import  messagebox,ttk,filedialog     
+import pandas as pd
+import os
+import shutil 
+from PIL import Image, ImageTk
+import Improved as im
+import ctypes     
+
+#import Mypackage.Mymodule as mm Previous code
+
+
+
+class App(tk.Tk):    # Basic App blueprint. Tabs with features are added to it
+  def __init__(self):
+      super().__init__()
+
+
+      self.title("Materials Analysis")    
+      style = ttk.Style()                            #Use to change the style of the tabs
+      style.configure("Notebook.Tab", padding=[20,0,20,0])  
+    
+      self.notebook = ttk.Notebook()
+      self.geometry("700x600")
+      self.notebook.pack(fill="both", expand=True)
+
+      material_result=obtain_materials()
+      if material_result[0]:
+          pass
+      else:
+          messagebox.showerror("Error","Can't find any Excel files")
+
+      self.buffer=BufferStorage()
+      self.show_photo_button = ttk.Button(self, text="Show Photo", command=self.buffer.get_photos)
+      self.show_photo_button.pack(pady=20)
+      
+      
+      self.calc_tab = CalcTab(self,self.notebook,material_result[1]) 
+      self.frac_tab = FracTab(self,self.notebook,material_result[1],self.buffer)
+      self.ani_tab =  AnisTab(self,self.notebook,material_result[2],self.buffer) 
+      self.comp_tab = CompTab(self,self.notebook,material_result[2],self.buffer) 
+      self.plas_tab = PlasTab(self,self.notebook,material_result[2],self.buffer) 
+     
+
+
+      self.mainloop()
+
+
+# Misc functions
+
+class BufferStorage:
+    def __init__(self):
+        self.photo_buffer = []  # To store photos
+        self.data_buffer = []   # To store general data
+
+    def add_photo(self, photo):
+        self.photo_buffer.append(photo)
+
+    def add_data(self, data):
+        self.data_buffer.append(data)
+
+    def get_photos(self):
+      print(len(self.photo_buffer))
+      return self.photo_buffer
+
+    def get_data(self):
+      return self.data_buffer
+
+    def clear_photos(self):
+        self.photo_buffer.clear()
+    def clear_data(self):
+        self.data_buffer.clear()
+
+
+def address():
+  return ("Excel_raw","Excel_processed")
+
+def obtain_materials():
+    Excel_raw,Excel_processed=address()
+    
+    materials_raw = [os.path.splitext(f)[0] for f in os.listdir(Excel_raw) if f.endswith(('.xlsx', '.xls'))]
+    materials_processed = [os.path.splitext(f)[0] for f in os.listdir(Excel_processed) if f.endswith(('.xlsx', '.xls'))]
+    if not materials_raw:
+        return False,materials_raw,materials_processed
+    else:
+        return True,materials_raw,materials_processed
+
+
+def validate_input(new_value): #Ensures only numbers can be entered
+    if new_value == "" or new_value.replace("", "1").isdigit():
+        return True
+    return False
+
+
+
+
+ 
+# Calculation Tab
+ 
+class CalcTab(ttk.Frame):
+  def __init__(self,parent, notebook,materials):
+    super().__init__(parent)
+    
+    notebook.add(self, text="Calculation")
+
+
+
+    #Enables buttons          
+    def validate():
+      if self.selected_calc_mat.get() != "" and entry.get() != "":
+          calculate_button.config(state=tk.NORMAL)  # Enable the button
+          modified_button.config(state=tk.NORMAL)  # Enable the button
+
+      else:
+          calculate_button.config(state=tk.DISABLED)  # Enable the button
+          modified_button.config(state=tk.DISABLED)  # Enable the button      
+
+
+
+
+
+    canvas=tk.Canvas(self,scrollregion=(0,0,0,len(materials)*52),width=10,highlightthickness=0)
+    canvas.pack(side="left",expand=True,fill="both")
+    
+    
+    left_frame=ttk.Frame(canvas)
+    canvas.create_window((30,100), window=left_frame, anchor="nw")
+ 
+
+
+
+    mat_title = ttk.Label(canvas, text="Materials", font=("Arial", 15))
+    mat_title.pack(pady=20,anchor="nw",padx=37)
+
+    self.selected_calc_mat = tk.StringVar(value="")
+
+    for material in (materials):
+      radio = ttk.Radiobutton(left_frame, 
+                              text=material, 
+                              value=material, 
+                              variable=self.selected_calc_mat,
+                              command=validate)
+      radio.pack(anchor="w",pady=3)
+
+
+
+
+    ''''Right frame'''
+
+
+    right_frame=ttk.Frame(self)
+    right_frame.pack(side="left",padx=20,anchor="s")
+
+
+
+ 
+
+
+    top_right_frame=ttk.Frame(right_frame)
+    top_right_frame.pack(pady=200)
+
+
+    mat_title = ttk.Label(top_right_frame, text="Enter critical stress:",)
+    mat_title.pack(anchor="s")
+    
+    
+    validate_cmd = top_right_frame.register(validate_input)
+    entry = ttk.Entry(top_right_frame, validate="key", validatecommand=(validate_cmd, "%P"))
+    entry.pack(pady=10,side="top")
+    entry.bind("<KeyRelease>", lambda event: validate())
+
+    ''''Bottom right frame'''
+
+    bottom_right_frame=ttk.Frame(right_frame)
+    bottom_right_frame.pack(pady=20,padx=20)
+
+    calculate_button = ttk.Button(bottom_right_frame, text="Calculate",state=tk.DISABLED,command= lambda :calculate(False,int(entry.get())))
+    calculate_button.pack( side="left")
+
+    modified_button = ttk.Button(bottom_right_frame, text="Modified",state=tk.DISABLED,command= lambda :calculate(True,int(entry.get())))
+    modified_button.pack(padx=25 ,side="right")
+
+
+
+    scrollbar=ttk.Scrollbar(self,orient="vertical",command=canvas.yview)
+    scrollbar.pack(side="right", fill="y")
+    canvas.configure(yscrollcommand=scrollbar.set)
+
+
+    def calculate(modification,critical_stress:int):
+          Excel_raw =address()[0]
+
+          path = f"{Excel_raw}{os.sep}{self.selected_calc_mat.get()}.xlsx"
+          search_string = 'SDB'
+          excel_file = pd.ExcelFile(path, engine='openpyxl')
+          matching_sheets = [sheet for sheet in excel_file.sheet_names if search_string in sheet]
+
+          if modification:
+            for sheet_name in matching_sheets:
+                print("sheet_name")
+                im.calculation(path, sheet_name, critical_stress,True)
+          else: 
+              for sheet_name in matching_sheets:
+                im.calculation(path, sheet_name, critical_stress)
+
+          return
+
+ 
+class PlasTab(ttk.Frame):
+  def __init__(self,parent, notebook,materials,buffer):
+    super().__init__(parent)
+    Excel_processed=address()[1]
+
+    notebook.add(self, text="Plasticity")
+
+    mat_title = ttk.Label(self, text="Materials", font=("Arial", 15))
+    mat_title.pack(pady=20,anchor="nw",padx=37)
+
+    canvas=tk.Canvas(self, 
+                     scrollregion=(0,0,0,len(materials)*45),
+                     width=10,
+                     highlightthickness=0)
+    canvas.pack(side="left",expand=True,fill="both")
+    
+    
+    left_frame=ttk.Frame(canvas)
+    canvas.create_window((20,20), window=left_frame, anchor="nw")
+ 
+
+
+    self.selected_mat = tk.StringVar(value="")
+
+    for material in (materials):
+      radio = ttk.Radiobutton(left_frame, 
+                              text=material,
+                               value=material,
+                                 variable=self.selected_mat)
+      radio.pack(anchor="sw",pady=3)
+
+
+    ''''Middle Frame'''
+    
+
+    properties_frame=ttk.Frame(self)
+    properties_frame.pack(side="left",padx=15,expand=True,fill="both",anchor="n")
+
+
+    prop_title = ttk.Label(properties_frame, text="Graph", font=("Arial", 15))
+    prop_title.pack(pady=20)
+
+    prop_separator = ttk.Separator(properties_frame, orient="horizontal")
+    prop_separator.pack(pady=1)  
+
+    properties = ["engineering", "true", "effective plastic strain","r-value"] 
+    self.property_vars = {}
+    for prop in (properties):
+      var = tk.BooleanVar(value=False)   
+      chk = ttk.Checkbutton(properties_frame, text=prop, variable=var)
+      self.property_vars[prop] = var
+      chk.pack(anchor="sw", pady=2) 
+
+
+    
+    
+    prop_separator = ttk.Separator(properties_frame, orient="horizontal")
+    prop_separator.pack(pady=1)  
+
+
+    
+    def repeatablity_caller():
+      path = f"{Excel_processed}{os.sep}{self.selected_mat.get()}.xlsx"
+      selected = [prop for prop, var in self.property_vars.items() if var.get()]
+      for p in selected:
+        buffer.add_photo(im.repeatablity(path,"Sheet1",p))
+
+      ImageGrid(self,buffer) # type: ignore
+        
+
+   
+   
+    repeat_button=ttk.Button(properties_frame,text="Repeat",command=lambda :repeatablity_caller())
+    repeat_button.pack(pady=3)  
+
+    def size_effect():
+      selected_indices = [idx for idx, var in self.property_vars.items() if var.get()]
+      path = f"{Excel_processed}{os.sep}{self.selected_mat.get()}.xlsx"
+      selected = [prop for prop, var in self.property_vars.items() if var.get()]
+
+      
+      data_frame=pd.read_excel(path,sheet_name="Sheet1",header=([0,1,2]))
+      tests_list = data_frame.columns.get_level_values(0).unique().tolist()
+      # create a new window
+      new_window = tk.Toplevel(self)
+      new_window.title("Select test number")
+      # build a frame to display checkboxes
+      check_frame = ttk.Frame(new_window)
+      check_frame.pack (pady=10)
+      #generate a list of checkboxes with all tests list in the processed excel.
+      selected_tests = {}
+      for idx, prop in enumerate(tests_list):
+        var = tk.BooleanVar(value=False)
+        chk = ttk.Checkbutton(check_frame, text=prop, variable=var)
+        chk.grid(row=idx+1, column=1, sticky='w')
+        selected_tests[prop] = var
+      def on_confirm():
+        print("Donkey")
+        selected_options = [opt for opt, var in selected_tests.items() if var.get()]
+        print((path, selected_options,selected_indices[0]))
+        for opts in selected:
+          buffer.add_photo(im.custom_plot(path, selected_options,opts))
+        ImageGrid(self,buffer) # type: ignore
+      confirm_button = ttk.Button(new_window, text="Confirm", command=on_confirm)
+      confirm_button.pack(pady=10)
+    
+    
+    custom_plot_button=ttk.Button(properties_frame,text="Custom Plot",command=size_effect)
+    custom_plot_button.pack(pady=3)  
+
+    def uts():
+        path = f"{Excel_processed}{os.sep}{self.selected_mat.get()}.xlsx"
+        buffer.add_photo(im.uts_plot(path,"Sheet1"))
+
+
+        ImageGrid(self,buffer) 
+   
+   
+    yts_button=ttk.Button(properties_frame, text="UTS", command=uts)
+    yts_button.pack(pady=3)
+
+
+    def r_elong():
+        path = f"{Excel_processed}{os.sep}{self.selected_mat.get()}.xlsx"
+        buffer.add_photo(im.r_plot(path,"Sheet1"))
+
+        ImageGrid(self,buffer) 
+   
+   
+    ytsU_button=ttk.Button(properties_frame, text="R-Value", command=r_elong)
+    ytsU_button.pack(pady=3)
+
+    scrollbar=ttk.Scrollbar(self,orient="vertical",command=canvas.yview)
+    scrollbar.pack(side="right", fill="y")
+    canvas.configure(yscrollcommand=scrollbar.set)
+
+
+ 
+class FracTab(ttk.Frame):
+  def __init__(self, parent,notebook,materials,buffer):
+    super().__init__(parent)
+    notebook.add(self, text="Fracture")
+    self.material_vars = {}
+     
+    
+    canvas=tk.Canvas(self,scrollregion=(0,0,0,len(materials)*52),width=10,highlightthickness=0)
+    canvas.pack(side="left",expand=True,fill="both")
+ 
+
+
+    ''''Left frame'''
+
+
+    left_frame=ttk.Frame(canvas)
+    canvas.create_window((20,100), window=left_frame, anchor="nw")
+     
+    mat_title = ttk.Label(canvas, text="Materials", font=("Arial", 15))
+    mat_title.pack(pady=20,anchor="nw",padx=37)
+    self.selected_calc_mat = tk.StringVar(value="")
+    
+
+    
+    
+    right_frame=ttk.Frame(self)
+    right_frame.pack(side="left")
+
+
+
+    self.selected_calc_mat = tk.StringVar(value="")
+
+    def frac_calculate(path,var):  
+        for header in var:
+          buffer.add_photo(im.fracture_repeat(path,  header))
+        ImageGrid(self,buffer) # type: ignore
+        
+
+    def frac_repeat():        #Add list for eveyr selected matertial
+        for widget in right_frame.winfo_children():
+          widget.pack_forget()
+      
+        Excel_raw=address()[0]
+
+        print(self.selected_calc_mat.get())
+        path = f"{Excel_raw}{os.sep}{self.selected_calc_mat.get()}.xlsx"
+        all_sheets = pd.ExcelFile(path).sheet_names
+        filtered_sheets = [sheet for sheet in all_sheets if "SDB" not in sheet and "Tests" not in sheet]
+        sheet_list = list(filtered_sheets)
+        self.checkbox_vars = {}
+        for header in sheet_list:
+          var = tk.BooleanVar(value=False)
+          checkbox = ttk.Checkbutton(right_frame, text=header, variable=var)
+          self.checkbox_vars[header] = var
+          checkbox.pack(anchor="w", pady=2,padx=50)
+
+        def get_selected(): # Collect the ticked boxses
+            
+            selected = [header for header, var in self.checkbox_vars.items() if var.get()]
+            return selected
+
+
+        def frac_compare(path,var):
+          compare_materials=[]
+          for material in materials:
+            path = f"{Excel_raw}{os.sep}{material}.xlsx"
+            all_sheets = pd.ExcelFile(path).sheet_names
+            filtered_sheets = [sheet for sheet in all_sheets if "SDB" not in sheet and "Tests" not in sheet]
+            sheet_list = list(filtered_sheets)
+            if (all(item in sheet_list for item in get_selected())):
+              compare_materials.append(material)
+          
+          
+          compare_materials.remove((self.selected_calc_mat.get()))
+          print(compare_materials)
+          
+          
+          window = tk.Toplevel()
+          window.title("Select Other Materials")
+          self.bvars = {}
+          for material in compare_materials:
+              bvar = tk.BooleanVar(value=False)
+              chk = ttk.Checkbutton(window, text=material, variable=bvar, onvalue=True, offvalue=False)              
+              self.bvars[material]=bvar
+              #chk.pack(anchor='w')
+
+              chk.pack(anchor='w')
+          def get_selected_checks():   
+            selected = [header for header, var in self.bvars.items() if var.get()]
+            selected.append(self.selected_calc_mat.get())
+            return selected
+
+          btn = ttk.Button(window, text="OK", command=lambda:frac_compare_caller(var,get_selected_checks()))
+          btn.pack()
+
+
+        def frac_compare_caller(var,materials):
+          print(materials)
+  
+
+          for header in var:
+            bufs=im.fracture_compare(path,  header,materials)
+            print(len(bufs))
+            #buffer.add_photo(im.fracture_compare(path,  header,materials))
+            
+          #ImageGrid(self,buffer) # type: ignore
+          
+          #ImageGrid(self,"Script\images") # type: ignore
+
+            #if get_selected()
+
+
+
+        confirm_button=ttk.Button(right_frame,text="Confirm",command= lambda:frac_calculate(path,get_selected()))           
+        confirm_button.pack(padx=50)
+        compare_button=ttk.Button(right_frame,text="Compare",command= lambda:frac_compare(path,get_selected()))           
+        compare_button.pack(padx=50)
+    
+
+
+    for material in (materials):  #Add materials
+      radio = ttk.Radiobutton(left_frame, text=material, value=material, variable=self.selected_calc_mat, command=frac_repeat)
+      radio.pack(anchor="w")
+
+    scrollbar=ttk.Scrollbar(self,orient="vertical",command=canvas.yview)
+    scrollbar.pack(side="right", fill="y")
+    canvas.configure(yscrollcommand=scrollbar.set)
+
+ 
+# class ImageGrid(tk.Toplevel):
+#     def __init__(self, parent, folder_path, *args, **kwargs):
+#         super().__init__(parent, *args, **kwargs)
+#         self.title("Image Grid Viewer")
+#         self.geometry("1670x1600")
+
+#         # Create a canvas and a scrollbar
+#         self.canvas = tk.Canvas(self)
+#         self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+#         self.scrollable_frame = ttk.Frame(self.canvas)
+#         # Configure the canvas and scrollbar
+#         self.scrollable_frame.bind(
+#             "<Configure>",
+#             lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+#         )
+#         self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+#         self.canvas.configure(yscrollcommand=self.scrollbar.set)
+#         self.scrollbar.pack(side="right", fill="y")
+#         self.canvas.pack(side="left", fill="both", expand=True)
+
+#         # Load and display images
+#         self.images = self.load_images(folder_path)
+#         self.image_paths = [os.path.join(folder_path, file_name)
+#                             for file_name in os.listdir(folder_path)
+#                             if file_name.lower().endswith((".png", ".jpg", ".jpeg", ".gif"))]
+#         self.display_images()
+        
+        
+#         self.protocol("WM_DELETE_WINDOW", self.cleanup)
+
+#     def load_images(self, folder_path):
+#         images = []
+#         for file_name in os.listdir(folder_path):
+#             if file_name.lower().endswith((".png", ".jpg", ".jpeg")):
+#                 image_path = os.path.join(folder_path, file_name)
+#                 img = Image.open(image_path)
+#                 img = img.resize((4 * 190, 3 * 190)) 
+#                 images.append(ImageTk.PhotoImage(img))
+#         return images
+
+#     def save_image(self, image_path,choose=False):
+#         """Prompts the user to select a save location and copies the image file there."""
+#         if choose:
+#             save_path = filedialog.asksaveasfilename(
+#                 initialfile=os.path.basename(image_path),
+#                 title="Save Image As",
+#                 filetypes=[("Image Files", "*.png;*.jpg;*.jpeg;*.gif"), ("All Files", "*.*")]
+#                 )
+#         else:
+#             save_path="../Saved"
+            
+#             # If a save location is selected, copy the file
+#         if save_path:
+#             ext = os.path.splitext(image_path)[1]
+#             if not save_path.lower().endswith(ext.lower()):
+#               save_path += ext  
+#             shutil.copy(image_path, save_path)
+#             print(f"Image saved to {save_path}")
+#         else:
+#             print("Save operation canceled.")
+    
+#     def display_images(self):
+
+#         for i, (img, image_path) in enumerate(zip(self.images, self.image_paths)):
+#             row, col = divmod(i, 2)
+
+#             frame = ttk.Frame(self.scrollable_frame)
+#             frame.grid(row=row, column=col, padx=10, pady=2)
+
+#             label = tk.Label(frame, image=img)
+#             label.pack()
+#             button_frame = ttk.Frame(frame)
+#             button_frame.pack(pady=5)
+
+#             save_button = ttk.Button(button_frame, text="Save", command=lambda:self.save_image(image_path))
+#             save_button.pack(pady=5,side="right")
+#             saveas_button = ttk.Button(button_frame, text="Save As", command=lambda:self.save_image(image_path,True))
+#             saveas_button.pack(pady=5,side="right")
+
+
+#     def cleanup(self):
+#         """Delete all files in the specified folder when the window is closed."""
+#         for file_name in os.listdir("Script\images"):
+#             file_path = os.path.join("Script\images", file_name)
+#             if os.path.isfile(file_path):
+#                 os.remove(file_path)  # Remove the file
+#         print(f"All files in images have been deleted.")
+
+#         self.destroy()  # Close the window
+
+
+
+# class ImageGrid(tk.Toplevel):
+#     def __init__(self, parent, image_buffers, *args, **kwargs):
+#         super().__init__(parent, *args, **kwargs)
+#         self.title("Image Grid Viewer")
+#         self.geometry("1670x1600")
+
+#         # Create a frame to display images
+#         self.frame = ttk.Frame(self)
+#         self.frame.pack(fill="both", expand=True)
+
+#         # Load and display images from the provided image buffers
+#         self.images = self.load_images(image_buffers)
+#         self.display_images()
+
+#         def cleanup():
+#           image_buffers.clear_photos()
+#           self.destroy()
+#         self.protocol("WM_DELETE_WINDOW",cleanup)
+
+#     def load_images(self, image_buffers):
+#       images = []
+#       tem_image = image_buffers.get_photos()
+#       for buffer in tem_image:
+#           img = Image.open(io.BytesIO(buffer))
+#           img = img.resize((190 * 4, 190 * 3))  
+#           images.append(ImageTk.PhotoImage(img)) 
+#       return images
+
+#     def display_images(self):
+#         for i, img in enumerate(self.images):
+#             # Create a label for each image
+#             label = tk.Label(self.frame, image=img)
+#             label.grid(row=i // 2, column=i % 2, padx=10, pady=10)  # Display images in a 2-column grid
+#             label.image = img  # Keep a reference to avoid garbage collection
+
+
+
+## IS too slow since it opens files for each image
+  
+ 
+
+class ImageGrid(tk.Toplevel):
+    def __init__(self, parent, image_buffers):
+        super().__init__(parent)
+        self.title("Grpahs")
+        self.geometry("1670x1600")
+
+        self.canvas = tk.Canvas(self)
+        self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        self.image_frame = ttk.Frame(self.canvas)
+        self.canvas.pack(side="left", fill="both", expand=True)
+        self.scrollbar.pack(side="right", fill="y")
+        self.canvas.create_window((0, 0), window=self.image_frame, anchor="nw")
+
+        self.images = self.load_images(image_buffers)
+        self.display_images()
+
+        self.image_frame.update_idletasks()
+        self.canvas.config(scrollregion=self.canvas.bbox("all"))
+
+        def cleanup():
+            image_buffers.clear_photos()
+            self.destroy()
+        self.protocol("WM_DELETE_WINDOW", cleanup)
+
+    def load_images(self, image_buffers):
+        images = []
+        tem_image = image_buffers.get_photos()
+        for buffer in tem_image:
+            img = Image.open(io.BytesIO(buffer))
+            img = img.resize((180*4, 180*3))  
+            images.append(ImageTk.PhotoImage(img)) 
+        return images
+
+    def display_images(self):
+        print(len(self.images))
+
+        for i, img in enumerate(self.images):
+            container = ttk.Frame(self.image_frame)
+            container.grid(row=i // 2, column=i % 2, pady=10, sticky="nsew")
+            label = tk.Label(container, image=img)
+            label.grid(row=0, column=0)
+            label.image = img  # Keep a reference to avoid garbage collection
+
+            # Add three dummy buttons below the image
+            button1 = ttk.Button(container, text="Button 1")
+            button2 = ttk.Button(container, text="Button 2")
+            button3 = ttk.Button(container, text="Button 3")
+
+           # button1.grid(row=1, column=0)
+            #button2.grid(row=1, column=1)
+            #button3.grid(row=1, column=2)
+
+
+
+class CompTab(ttk.Frame):
+  def __init__(self,parent, notebook,materials,buffer):
+    super().__init__(parent)
+
+    Excel_processed=address()[1]
+
+
+      
+    notebook.add(self, text="Comparasion")
+
+    mat_title = ttk.Label(self, text="Materials", font=("Arial", 15))
+    mat_title.pack(pady=20,anchor="nw",padx=37)
+
+    canvas=tk.Canvas(self, 
+                     scrollregion=(0,0,0,len(materials)*33),
+                     width=10,
+                     highlightthickness=0)
+    canvas.pack(side="left",expand=True,fill="both")
+    
+    
+    left_frame=ttk.Frame(canvas)
+    canvas.create_window((20,20), window=left_frame, anchor="nw")
+ 
+
+
+    self.selected_mat = tk.StringVar(value="")
+
+    self.material_vars = {}
+    for idx, material in enumerate(materials):
+      var = tk.BooleanVar(value=False)   
+      chk = ttk.Checkbutton(left_frame, text=material, variable=var)
+      chk.grid(row=idx+1, column=0, sticky='w')
+      self.material_vars[material] = var
+
+    def compare_caller():
+      selected_materials = [mat for mat, var in self.material_vars.items() if var.get()]
+      selected = [prop for prop, var in self.property_vars.items() if var.get()]
+      
+      for p in selected:
+        a=address()
+        buffer.add_photo(im.compare(a[1],selected_materials,p))
+
+      ImageGrid(self,buffer) # type: ignore
+        
+  
+    
+
+     
+
+    properties_frame=ttk.Frame(self)
+    properties_frame.pack(side="left",padx=15,expand=True,fill="both",anchor="ne")
+
+
+
+    # Fills horizontally
+
+    prop_title = ttk.Label(properties_frame, text="Graphs", font=("Arial", 15),anchor="w")
+    prop_title.pack(pady=20)
+
+    prop_separator = ttk.Separator(properties_frame, orient="horizontal")
+    prop_separator.pack(pady=1)  
+
+    properties = ["engineering", "true", "effective plastic strain","r-value"] 
+    self.property_vars = {}
+    for prop in (properties):
+      var = tk.BooleanVar(value=False)   
+      chk = ttk.Checkbutton(properties_frame, text=prop, variable=var)
+      self.property_vars[prop] = var
+      chk.pack(anchor="s", pady=2) 
+
+
+  
+    
+    prop_separator = ttk.Separator(properties_frame, orient="horizontal")
+    prop_separator.pack(pady=1)  
+
+
+
+    compare_button=ttk.Button(properties_frame,text="Compare",command=lambda :compare_caller())
+    compare_button.pack(pady=10)  
+
+
+
+    scrollbar=ttk.Scrollbar(self,orient="vertical",command=canvas.yview)
+    scrollbar.pack(side="right", fill="y")
+    canvas.configure(yscrollcommand=scrollbar.set)
+
+
+
+
+
+class AnisTab(ttk.Frame):
+  def __init__(self,parent, notebook,materials,buffer):
+    super().__init__(parent)
+    Excel_processed=address()[1]
+
+    notebook.add(self, text="Anistropy")
+
+    mat_title = ttk.Label(self, text="Materials", font=("Arial", 15))
+    mat_title.pack(pady=20,anchor="nw",padx=37)
+
+    canvas=tk.Canvas(self, 
+                     scrollregion=(0,0,0,len(materials)*45),
+                     width=10,
+                     highlightthickness=0)
+    canvas.pack(side="left",expand=True,fill="both")
+    
+    
+    left_frame=ttk.Frame(canvas)
+    canvas.create_window((20,40), window=left_frame, anchor="nw")
+ 
+
+
+    self.selected_mat = tk.StringVar(value="")
+
+    for material in (materials):
+      radio = ttk.Radiobutton(left_frame, 
+                              text=material,
+                               value=material,
+                                 variable=self.selected_mat)
+      radio.pack(anchor="sw",pady=3)
+
+
+
+
+    ''''Middle Frame'''
+
+
+
+
+    labels_frame=ttk.Frame(self)
+    labels_frame.pack(side="left",anchor="nw",padx=1)
+
+
+    label_separator = ttk.Separator(labels_frame, orient="horizontal")
+    label_separator.grid(row=0,column=0,columnspan=2,pady=35)  
+
+
+
+    labels = ["RD", "DD", "TD","24", "15", "30", "60", "75"]
+    self.label_vars = {}
+    self.entry_vars = {}
+    for i,label in enumerate(labels):
+      var = tk.BooleanVar(value=False)   
+      
+      chk = ttk.Label(labels_frame, text=label)
+      self.label_vars[label] = var
+      chk.grid(row=i+1,column=0,pady=2)  
+     
+      entry_var = tk.StringVar()
+      validate_cmd = labels_frame.register(validate_input)
+      entry = ttk.Entry(labels_frame, textvariable=entry_var, width=10, validate="key", validatecommand=(validate_cmd, "%P"))
+      entry.grid(row=i+1,column=1,pady=2,columnspan=5)
+      self.entry_vars[label] = entry_var
+
+      
+
+    properties_frame=ttk.Frame(self)
+    properties_frame.pack(side="left",padx=55,fill="both",anchor="n")
+
+
+
+
+    # Fills horizontally
+
+    prop_title = ttk.Label(properties_frame, text="Graph", font=("Arial", 15))
+    prop_title.pack(pady=5,anchor="n",side="top")
+
+    prop_separator = ttk.Separator(properties_frame, orient="horizontal")
+   # prop_separator.pack(pady=1)  
+
+    properties = ["engineering", "true", "effective plastic strain","r-value"] 
+    self.property_vars = {}
+    for prop in (properties):
+      var = tk.BooleanVar(value=False)   
+      chk = ttk.Checkbutton(properties_frame, text=prop, variable=var)
+      self.property_vars[prop] = var
+      chk.pack(anchor="sw", pady=2) 
+
+
+ 
+
+    def get_values():
+        values = {}
+        for label, var in self.entry_vars.items():
+            value = var.get()
+            if value:  
+                try:
+                    values[label] = value
+                except ValueError:
+                    messagebox.showerror("input error")
+                    return
+        return values   
+
+    def orientation():
+      path = f"{Excel_processed}{os.sep}{self.selected_mat.get()}.xlsx"
+      dire_test = get_values()
+      selected = [prop for prop, var in self.property_vars.items() if var.get()]
+      buffer.add_photo(im.orientation(path,"Sheet1",selected[0],dire_test))
+      ImageGrid(self,buffer) # type: ignore
+
+
+    anisotropy_button=ttk.Button(properties_frame,text="Anisotropy",command=lambda:orientation())
+    anisotropy_button.pack(pady=3)  
+
+    scrollbar=ttk.Scrollbar(self,orient="vertical",command=canvas.yview)
+    scrollbar.pack(side="right", fill="y")
+    canvas.configure(yscrollcommand=scrollbar.set)
+
+
+
+
+
+
+
+ 
+
+
+ 
+def main(): 
+  ctypes.windll.shcore.SetProcessDpiAwareness(1) # Fix scaling so text isn't blurry. Test on mac screens
+  App()
+
+
+if __name__ == '__main__':
+  main()
