@@ -54,7 +54,6 @@ def xy_values(func_name):
     return x_name,y_name,xlabel,ylabel
 
 def repeatablity (path,sheet_name,func_name,setting_fn=None):
-    plt.clf()
     print(f"repeatablity({path},{sheet_name},{func_name})")
    
     x_name,y_name,xlabel,ylabel=xy_values(func_name)
@@ -68,7 +67,9 @@ def repeatablity (path,sheet_name,func_name,setting_fn=None):
     #creat a list containing all directions
     directions = list(set(tests_series.values()))
     geo_name = tests_list[0].split("_",1)[0]
+    buffers = []
     for dire in directions:
+        plt.clf()
         for i in range(6):
             test_name = f'{geo_name}_{dire}_{i+1}'
             try:
@@ -78,7 +79,7 @@ def repeatablity (path,sheet_name,func_name,setting_fn=None):
                 x = x.loc[start_index:]          
                 y = y.loc[start_index:] 
 
-                plt.plot(x,y,label=f'{dire}_{i+1}')
+                plt.plot(x,y,label=f'{i+1}')
                 plt.xlabel(xlabel)
                 plt.ylabel(ylabel)
             except KeyError:
@@ -98,7 +99,8 @@ def repeatablity (path,sheet_name,func_name,setting_fn=None):
         buffer = BytesIO()
         plt.savefig(buffer, format='PNG', bbox_inches='tight')
         buffer.seek(0)  # Reset buffer's position to the start
-        return buffer.getvalue()
+        buffers.append(buffer)
+    return buffers
 
 def compare(address,materials,func_name,setting_fn=None):
     plt.clf()

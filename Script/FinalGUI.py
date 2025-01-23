@@ -286,7 +286,10 @@ class PlasTab(ttk.Frame):
       path = f"{Excel_processed}{os.sep}{self.selected_mat.get()}.xlsx"
       selected = [prop for prop, var in self.property_vars.items() if var.get()]
       for p in selected:
-        buffer.add_photo(im.repeatablity(path,"Sheet1",p))
+        bufs=im.repeatablity(path,"Sheet1",p)
+        for b in bufs:
+          buffer.add_photo(b.getvalue())
+        #buffer.add_photo(im.repeatablity(path,"Sheet1",p))
 
       ImageGrid(self,buffer) # type: ignore
         
@@ -663,18 +666,29 @@ class ImageGrid(tk.Toplevel):
             container = ttk.Frame(self.image_frame)
             container.grid(row=i // 2, column=i % 2, pady=10, sticky="nsew")
             label = tk.Label(container, image=img)
-            label.grid(row=0, column=0)
+          
+            label.pack()
+            button_container = ttk.Frame(container)
+            button_container.pack(pady=5)
+
             label.image = img  # Keep a reference to avoid garbage collection
-
-            # Add three dummy buttons below the image
-            button1 = ttk.Button(container, text="Button 1")
-            button2 = ttk.Button(container, text="Button 2")
-            button3 = ttk.Button(container, text="Button 3")
-
+            save_button = ttk.Button(button_container, text="Save As ", command=lambda img=img: self.save_image(img))
+            save_button.pack(padx=5)
+            save_button = ttk.Button(button_container, text="Save Image", command=lambda img=img: self.save_image(img,True))
+            save_button.pack(side="right",padx=5)
            # button1.grid(row=1, column=0)
             #button2.grid(row=1, column=1)
             #button3.grid(row=1, column=2)
-
+    def save_image(self, img,location=False):
+        if location:
+          img._PhotoImage__photo.write("Saved")
+        else:
+          file_path = filedialog.asksaveasfilename(defaultextension=".png",
+                                                  filetypes=[("PNG files", "*.png"),
+                                                              ("JPEG files", "*.jpg"),
+                                                              ("All files", "*.*")])
+          if file_path:
+            img._PhotoImage__photo.write(file_path)
 
 
 class CompTab(ttk.Frame):
