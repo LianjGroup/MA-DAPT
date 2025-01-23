@@ -455,6 +455,9 @@ def uts_plot(path,sheet_name):
     ax2.plot(final_directions, avg_elongation_list, color='tab:blue', marker='s', label='Avg elongation at UTS')
     ax2.tick_params(axis='y', labelcolor='tab:blue')
 
+    dead = ['0', '15', '30', '45', '60', '75', '90']
+    plt.xticks(final_directions,dead)
+
     
     plt.rcParams['font.size'] = 14
     fig.tight_layout()
@@ -613,6 +616,11 @@ def r_plot(path,sheet_name):
     ax2.set_ylabel('Elonation, %', color='tab:blue')
     ax2.plot(final_directions, avg_elongation_list, color='tab:blue', marker='s', label='Avg elongation at R value')
     ax2.tick_params(axis='y', labelcolor='tab:blue')
+
+
+    dead = ['0', '15', '30', '45', '60', '75', '90']
+
+    plt.xticks(final_directions,dead)
 
     plt.rcParams['font.family'] = 'Arial'
     plt.rcParams['font.size'] = 14
