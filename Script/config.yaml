@@ -1,0 +1,14 @@
+matplotlib:
+  font:
+    family: Arial
+    size: 16
+  axes:
+    labelsize: 16
+    titlesize: 16
+  legend:
+    on: True
+    fontsize: 16
+file_paths:
+  raw_files_location: Excel_raw
+  processed_files_location: Excel_processed
+  save_location: save

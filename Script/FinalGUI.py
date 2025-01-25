@@ -66,7 +66,7 @@ class App(tk.Tk):    # Basic App blueprint. Tabs with features are added to it
 class BufferStorage:
     def __init__(self):
         self.photo_buffer = []  # To store photos
-        self.data_buffer = []   # To store general data
+        self.data_buffer = []   # To store x,y values
 
     def add_photo(self, photo):
         self.photo_buffer.append(photo)
@@ -106,6 +106,130 @@ def validate_input(new_value): #Ensures only numbers can be entered
         return True
     return False
 
+
+
+
+class ImageGrid(tk.Toplevel):
+    def __init__(self, parent, image_buffers):
+        super().__init__(parent)
+        self.title("Grpahs")
+        self.geometry("1500x1600")
+
+        self.canvas = tk.Canvas(self)
+        self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        self.image_frame = ttk.Frame(self.canvas)
+        self.canvas.pack(side="left", fill="both", expand=True)
+        self.scrollbar.pack(side="right", fill="y")
+        self.canvas.create_window((0, 0), window=self.image_frame, anchor="nw")
+        
+        
+        self.menubar = tk.Menu(self)
+        self.config(menu=self.menubar)
+        self.file_menu = tk.Menu(self.menubar,tearoff=False)
+        self.file_menu.add_command(
+            label='Save all',
+            command=self.saveall,
+        )
+        self.menubar.add_cascade(
+            label="File",
+            menu=self.file_menu,
+            underline=0
+        )
+
+        self.images = self.load_images(image_buffers)
+        self.display_images()
+
+        self.image_frame.update_idletasks()
+        self.canvas.config(scrollregion=self.canvas.bbox("all"))
+
+        def cleanup():
+            image_buffers.clear_photos()
+            self.destroy()
+        self.protocol("WM_DELETE_WINDOW", cleanup)
+
+
+
+    def saveall(self):
+        for img in self.images:
+            self.save_image(img, True)
+    def load_images(self, image_buffers):
+        images = []
+        tem_image = image_buffers.get_photos()
+        if tem_image.__len__() >1:
+          for buffer in tem_image:
+              img = Image.open(io.BytesIO(buffer))
+              img = img.resize((180*4, 180*3))  
+              images.append(ImageTk.PhotoImage(img))
+        else:
+          img = Image.open(io.BytesIO(tem_image[0]))
+          img = img.resize((220*4, 220*3))  
+          images.append(ImageTk.PhotoImage(img)) 
+        return images
+
+    def display_images(self):
+        print(len(self.images))
+      # For single graph
+        if len(self.images) == 1:                
+            img=self.images[0]
+            container = ttk.Frame(self.image_frame)
+            container.pack(side="top")
+            label = tk.Label(container, image=img)
+            label.pack()
+            button_container = ttk.Frame(container)
+            button_container.pack(pady=5)
+            label.image = img
+            save_button = ttk.Button(button_container, text="Save As ", command=lambda img=img: self.save_image(img))
+            save_button.pack(padx=5)
+            save_as_button = ttk.Button(button_container, text="Save Image", command=lambda img=img: self.save_image(img,True))
+            save_as_button.pack(side="right")
+        else:
+          for i, img in enumerate(self.images):
+              container = ttk.Frame(self.image_frame)
+              container.grid(row=i // 2, column=i % 2, pady=10, sticky="nsew")
+              label = tk.Label(container, image=img)
+            
+              label.pack()
+              button_container = ttk.Frame(container)
+              button_container.pack(pady=5)
+
+              label.image = img  # Keep a reference to avoid garbage collection
+              save_button = ttk.Button(button_container, text="Save As ", command=lambda img=img: self.save_image(img))
+              save_button.pack(padx=5)
+              save_as_button = ttk.Button(button_container, text="Save Image", command=lambda img=img: self.save_image(img,True))
+              save_as_button.pack(side="right",padx=5)
+            # button1.grid(row=1, column=0)
+              #button2.grid(row=1, column=1)
+              #button3.grid(row=1, column=2)
+    def save_image(self, img,location=False):
+        if location:
+            save_path = f"Saved{os.sep}Graph.png"
+            base, ext = os.path.splitext(save_path)
+            counter = 1
+            while os.path.exists(save_path):
+              save_path = f"{base}_{counter}{ext}"
+              counter += 1
+            img._PhotoImage__photo.write(save_path)
+        else:
+          file_path = filedialog.asksaveasfilename(defaultextension=".png",
+                                                  filetypes=[("PNG files", "*.png"),
+                                                              ("JPEG files", "*.jpg"),
+                                                              ("All files", "*.*")])
+          if file_path:
+            print("LLLLLLLLLLLLLLLLLM"+file_path)
+            img._PhotoImage__photo.write(file_path)
+
+
+
+
+class Settings(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.title("Settings")
+        self.geometry("800x600")
+
+      
 
 
 
@@ -396,9 +520,18 @@ class FracTab(ttk.Frame):
 
     def frac_calculate(path,var):  
         for header in var:
-          buffer.add_photo(im.fracture_repeat(path,  header))
-        ImageGrid(self,buffer) # type: ignore
+          bufs=(im.fracture_repeat(path,  header))
+          for b in bufs:
+            buffer.add_photo(b.getvalue())
+        ImageGrid(self,buffer)  
         
+
+ 
+
+
+
+
+
 
     def frac_repeat():        #Add list for eveyr selected matertial
         for widget in right_frame.winfo_children():
@@ -491,206 +624,10 @@ class FracTab(ttk.Frame):
     canvas.configure(yscrollcommand=scrollbar.set)
 
  
-# class ImageGrid(tk.Toplevel):
-#     def __init__(self, parent, folder_path, *args, **kwargs):
-#         super().__init__(parent, *args, **kwargs)
-#         self.title("Image Grid Viewer")
-#         self.geometry("1670x1600")
-
-#         # Create a canvas and a scrollbar
-#         self.canvas = tk.Canvas(self)
-#         self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
-#         self.scrollable_frame = ttk.Frame(self.canvas)
-#         # Configure the canvas and scrollbar
-#         self.scrollable_frame.bind(
-#             "<Configure>",
-#             lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-#         )
-#         self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-#         self.canvas.configure(yscrollcommand=self.scrollbar.set)
-#         self.scrollbar.pack(side="right", fill="y")
-#         self.canvas.pack(side="left", fill="both", expand=True)
-
-#         # Load and display images
-#         self.images = self.load_images(folder_path)
-#         self.image_paths = [os.path.join(folder_path, file_name)
-#                             for file_name in os.listdir(folder_path)
-#                             if file_name.lower().endswith((".png", ".jpg", ".jpeg", ".gif"))]
-#         self.display_images()
-        
-        
-#         self.protocol("WM_DELETE_WINDOW", self.cleanup)
-
-#     def load_images(self, folder_path):
-#         images = []
-#         for file_name in os.listdir(folder_path):
-#             if file_name.lower().endswith((".png", ".jpg", ".jpeg")):
-#                 image_path = os.path.join(folder_path, file_name)
-#                 img = Image.open(image_path)
-#                 img = img.resize((4 * 190, 3 * 190)) 
-#                 images.append(ImageTk.PhotoImage(img))
-#         return images
-
-#     def save_image(self, image_path,choose=False):
-#         """Prompts the user to select a save location and copies the image file there."""
-#         if choose:
-#             save_path = filedialog.asksaveasfilename(
-#                 initialfile=os.path.basename(image_path),
-#                 title="Save Image As",
-#                 filetypes=[("Image Files", "*.png;*.jpg;*.jpeg;*.gif"), ("All Files", "*.*")]
-#                 )
-#         else:
-#             save_path="../Saved"
-            
-#             # If a save location is selected, copy the file
-#         if save_path:
-#             ext = os.path.splitext(image_path)[1]
-#             if not save_path.lower().endswith(ext.lower()):
-#               save_path += ext  
-#             shutil.copy(image_path, save_path)
-#             print(f"Image saved to {save_path}")
-#         else:
-#             print("Save operation canceled.")
-    
-#     def display_images(self):
-
-#         for i, (img, image_path) in enumerate(zip(self.images, self.image_paths)):
-#             row, col = divmod(i, 2)
-
-#             frame = ttk.Frame(self.scrollable_frame)
-#             frame.grid(row=row, column=col, padx=10, pady=2)
-
-#             label = tk.Label(frame, image=img)
-#             label.pack()
-#             button_frame = ttk.Frame(frame)
-#             button_frame.pack(pady=5)
-
-#             save_button = ttk.Button(button_frame, text="Save", command=lambda:self.save_image(image_path))
-#             save_button.pack(pady=5,side="right")
-#             saveas_button = ttk.Button(button_frame, text="Save As", command=lambda:self.save_image(image_path,True))
-#             saveas_button.pack(pady=5,side="right")
 
 
-#     def cleanup(self):
-#         """Delete all files in the specified folder when the window is closed."""
-#         for file_name in os.listdir("Script\images"):
-#             file_path = os.path.join("Script\images", file_name)
-#             if os.path.isfile(file_path):
-#                 os.remove(file_path)  # Remove the file
-#         print(f"All files in images have been deleted.")
-
-#         self.destroy()  # Close the window
-
-
-
-# class ImageGrid(tk.Toplevel):
-#     def __init__(self, parent, image_buffers, *args, **kwargs):
-#         super().__init__(parent, *args, **kwargs)
-#         self.title("Image Grid Viewer")
-#         self.geometry("1670x1600")
-
-#         # Create a frame to display images
-#         self.frame = ttk.Frame(self)
-#         self.frame.pack(fill="both", expand=True)
-
-#         # Load and display images from the provided image buffers
-#         self.images = self.load_images(image_buffers)
-#         self.display_images()
-
-#         def cleanup():
-#           image_buffers.clear_photos()
-#           self.destroy()
-#         self.protocol("WM_DELETE_WINDOW",cleanup)
-
-#     def load_images(self, image_buffers):
-#       images = []
-#       tem_image = image_buffers.get_photos()
-#       for buffer in tem_image:
-#           img = Image.open(io.BytesIO(buffer))
-#           img = img.resize((190 * 4, 190 * 3))  
-#           images.append(ImageTk.PhotoImage(img)) 
-#       return images
-
-#     def display_images(self):
-#         for i, img in enumerate(self.images):
-#             # Create a label for each image
-#             label = tk.Label(self.frame, image=img)
-#             label.grid(row=i // 2, column=i % 2, padx=10, pady=10)  # Display images in a 2-column grid
-#             label.image = img  # Keep a reference to avoid garbage collection
-
-
-
-## IS too slow since it opens files for each image
-  
+   
  
-
-class ImageGrid(tk.Toplevel):
-    def __init__(self, parent, image_buffers):
-        super().__init__(parent)
-        self.title("Grpahs")
-        self.geometry("1670x1600")
-
-        self.canvas = tk.Canvas(self)
-        self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
-        self.canvas.configure(yscrollcommand=self.scrollbar.set)
-
-        self.image_frame = ttk.Frame(self.canvas)
-        self.canvas.pack(side="left", fill="both", expand=True)
-        self.scrollbar.pack(side="right", fill="y")
-        self.canvas.create_window((0, 0), window=self.image_frame, anchor="nw")
-
-        self.images = self.load_images(image_buffers)
-        self.display_images()
-
-        self.image_frame.update_idletasks()
-        self.canvas.config(scrollregion=self.canvas.bbox("all"))
-
-        def cleanup():
-            image_buffers.clear_photos()
-            self.destroy()
-        self.protocol("WM_DELETE_WINDOW", cleanup)
-
-    def load_images(self, image_buffers):
-        images = []
-        tem_image = image_buffers.get_photos()
-        for buffer in tem_image:
-            img = Image.open(io.BytesIO(buffer))
-            img = img.resize((180*4, 180*3))  
-            images.append(ImageTk.PhotoImage(img)) 
-        return images
-
-    def display_images(self):
-        print(len(self.images))
-
-        for i, img in enumerate(self.images):
-            container = ttk.Frame(self.image_frame)
-            container.grid(row=i // 2, column=i % 2, pady=10, sticky="nsew")
-            label = tk.Label(container, image=img)
-          
-            label.pack()
-            button_container = ttk.Frame(container)
-            button_container.pack(pady=5)
-
-            label.image = img  # Keep a reference to avoid garbage collection
-            save_button = ttk.Button(button_container, text="Save As ", command=lambda img=img: self.save_image(img))
-            save_button.pack(padx=5)
-            save_button = ttk.Button(button_container, text="Save Image", command=lambda img=img: self.save_image(img,True))
-            save_button.pack(side="right",padx=5)
-           # button1.grid(row=1, column=0)
-            #button2.grid(row=1, column=1)
-            #button3.grid(row=1, column=2)
-    def save_image(self, img,location=False):
-        if location:
-          img._PhotoImage__photo.write("Saved")
-        else:
-          file_path = filedialog.asksaveasfilename(defaultextension=".png",
-                                                  filetypes=[("PNG files", "*.png"),
-                                                              ("JPEG files", "*.jpg"),
-                                                              ("All files", "*.*")])
-          if file_path:
-            img._PhotoImage__photo.write(file_path)
-
-
 class CompTab(ttk.Frame):
   def __init__(self,parent, notebook,materials,buffer):
     super().__init__(parent)

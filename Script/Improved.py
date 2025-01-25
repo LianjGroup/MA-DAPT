@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
 import os
+import yaml
 from io import BytesIO
 #from scipy.optimize import curve_fit
 #from scipy.interpolate import CubicSpline
@@ -17,13 +18,29 @@ from io import BytesIO
 #Default values
 # add option to change the default values in settings 
  
-plt.rcParams.update({
-    'font.family': 'Arial',
-    'font.size': 16,
-    'axes.labelsize': 16,
-    'axes.titlesize': 16,
-    'legend.fontsize': 16
-})
+# set the default values for the plot
+#Not a function since I want it to run everytime the program is run
+#
+
+legend_on 
+
+def configs():
+    with open('config.yaml') as file:
+        config = yaml.full_load(file)
+
+
+    plt.rcParams.update({
+        'font.family': config['matplotlib']['font']['family'],
+        'font.size': config['matplotlib']['font']['size'],
+        'axes.labelsize': config['matplotlib']['font']['size'],
+        'axes.titlesize': config['matplotlib']['font']['size'],
+        'legend.fontsize': config['matplotlib']['font']['size']
+    })
+    global legend_on
+    legend_on=config['matplotlib']['legend']
+     
+
+configs()
 
 
 def xy_values(func_name):
@@ -511,11 +528,13 @@ def orientation (path,sheet_name,func_name,dire_test,setting_fn=None):
     return buffer.getvalue()
 
 def fracture_repeat(path,sheet_name,setting_fn=None):
-    plt.clf()
+
     data_frame = pd.read_excel(path,sheet_name=sheet_name,header=([0,1,2]),index_col=0)
     old_list = data_frame.columns.get_level_values(0).unique().tolist()
     new_list = list({s.rsplit('_', 1)[0] for s in old_list})
+    buffers = []
     for index, test in enumerate(new_list):
+        plt.clf()
         for i in range(3): 
             try:
                 x = data_frame[f'{str(test)}_{i+1}']["Disp_Y"]["∆L [mm]"].dropna()
@@ -536,7 +555,8 @@ def fracture_repeat(path,sheet_name,setting_fn=None):
         buffer = BytesIO()
         plt.savefig(buffer, format='PNG', bbox_inches='tight')
         buffer.seek(0)  # Reset buffer's position to the start
-        return buffer.getvalue()
+        buffers.append(buffer)
+    return buffers
     
 
 ###########REMAKE
