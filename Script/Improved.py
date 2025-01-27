@@ -19,13 +19,12 @@ from io import BytesIO
 # add option to change the default values in settings 
  
 # set the default values for the plot
-#Not a function since I want it to run everytime the program is run
-#
+ 
 
-legend_on 
+legend_on=True
 
 def configs():
-    with open('config.yaml') as file:
+    with open(f'Script{os.sep}config.yaml') as file:
         config = yaml.full_load(file)
 
 
@@ -61,7 +60,7 @@ def xy_values(func_name):
         xlabel=x_name+", -"
         ylabel=y_name+", MPa"
     elif func_name == "r-value":
-        x_name = "Effective plastic strain"
+        x_name = "Y True strain"      #Create another ?????
         y_name = "r-value"
         xlabel=x_name+", -"
         ylabel=y_name+", -"
@@ -85,7 +84,11 @@ def repeatablity (path,sheet_name,func_name,setting_fn=None):
     directions = list(set(tests_series.values()))
     geo_name = tests_list[0].split("_",1)[0]
     buffers = []
+
     for dire in directions:
+        
+        totalx=[]
+        totaly=[]
         plt.clf()
         for i in range(6):
             test_name = f'{geo_name}_{dire}_{i+1}'
@@ -96,18 +99,35 @@ def repeatablity (path,sheet_name,func_name,setting_fn=None):
                 x = x.loc[start_index:]          
                 y = y.loc[start_index:] 
 
+                totalx.append(x)
+                totaly.append(y)
+                print(f"test{len(x)}")
+                print(f"lest{len(y)}")
+
                 plt.plot(x,y,label=f'{i+1}')
                 plt.xlabel(xlabel)
                 plt.ylabel(ylabel)
             except KeyError:
                 continue
-        if func_name == 4:
+            except IndexError:
+                continue
+
             
-            plt.ylim([0,2])
+
+        if func_name == "r-value":
+            
+            tx= sum(totalx)/(len(totalx))
+            ty= sum(totaly)/(len(totaly))
+            print(f"best{len(tx)}")
+            print(f"nest{len(ty)}")
+
+            plt.xlim(left=(0.01))
+            plt.plot(tx,ty,label="Average")
+            #plt.ylim([0,2])
+
+
         plt.legend()
-        plt.title(dire)
-        plt.rcParams['font.family'] = 'Arial'
-        plt.rcParams['font.size'] = 16
+        plt.title("SDB-"+dire)
         if setting_fn:
             setting_fn()
         #plt.show()
@@ -388,8 +408,7 @@ def rvalue(path,sheet_name):
 
 
 
-######################################
-
+ 
 def custom_plot(path,tests_list,func_name,setting_fn=None):
     plt.clf()
 
@@ -442,6 +461,7 @@ def uts_plot(path,sheet_name):
     for dire in directions_ordered:
         uts_values = []
         strain_at_uts_values = []
+        te_values=[]
         for i in range (1,4):
             test_name=f'{geo_name}_{dire}_{i}'
             try:
@@ -451,13 +471,19 @@ def uts_plot(path,sheet_name):
                 strain_at_uts = x[y.idxmax()]
                 uts_values.append(uts)
                 strain_at_uts_values.append(strain_at_uts)
+                
+                te=x.max()
+                te_values.append(te)
+
+                 
+
+
             except KeyError:
                 print(f"Test {test_name} not found in data")
                 continue
         if uts_values:
             avg_uts = sum(uts_values) / len(uts_values)
             avg_elongation = sum(strain_at_uts_values) / len(strain_at_uts_values)
-            
             avg_uts_list.append(avg_uts)
             avg_elongation_list.append(avg_elongation) 
             final_directions.append(dire)
@@ -465,8 +491,10 @@ def uts_plot(path,sheet_name):
 
     ax1.set_xlabel('Direction')
     ax1.set_ylabel('UTS, MPa', color='tab:red')
-    ax1.errorbar(final_directions, avg_uts_list, yerr=len(uts_values), color='tab:red', marker='o', label='Avg UTS (MPa)')
     ax1.plot(final_directions, avg_uts_list, color='tab:red', marker='o', label='Avg UTS (MPa)')
+   
+    #ax1.plot(final_directions, avg_uts_list, color='tab:red', marker='o', label='Avg UTS (MPa)')
+   
     ax1.tick_params(axis='y', labelcolor='tab:red')
 
     ax2 = ax1.twinx()
@@ -474,8 +502,10 @@ def uts_plot(path,sheet_name):
     ax2.plot(final_directions, avg_elongation_list, color='tab:blue', marker='s', label='Avg elongation at UTS')
     ax2.tick_params(axis='y', labelcolor='tab:blue')
 
+
+
     dead = ['0', '15', '30', '45', '60', '75', '90']
-    plt.xticks(final_directions,dead)
+    #plt.xticks(final_directions,dead)
 
     
     plt.rcParams['font.size'] = 14
@@ -559,6 +589,298 @@ def fracture_repeat(path,sheet_name,setting_fn=None):
     return buffers
     
 
+def fracture_normal_compare(path,sheet_names,setting_fn=None):
+    print("Sssssssssssssssssssssssssss")
+
+#     dataframes=[]
+#     for sheet_name in sheet_names:
+#         data_frame.append(pd.read_excel(path,sheet_name=sheet_name,header=([0,1,2]),index_col=0)
+# )
+
+
+    data_frame = pd.read_excel(path,sheet_name="SH",header=([0,1,2]),index_col=0)
+    data_frame1 = pd.read_excel(path,sheet_name="CHD6",header=([0,1,2]),index_col=0)
+    
+    old_list = data_frame.columns.get_level_values(0).unique().tolist()
+    new_list = list({s.rsplit('_', 1)[0] for s in old_list})
+    buffers = []
+    for index, test in enumerate(new_list):
+        plt.clf()
+        for i in range(3): 
+            try:
+                x = data_frame[f'{str(test)}_{i+1}']["Disp_Y"]["∆L [mm]"].dropna()
+                y = data_frame[f'{str(test)}_{i+1}']["Machine"]["Force"].dropna()
+                plt.plot(x,y,label=i+1)
+                a = data_frame1[f'CHD6{str(test)[-3:]}_{i+1}']["Disp_Y"]["∆L [mm]"].dropna()
+                b = data_frame1[f'CHD6{str(test)[-3:]}_{i+1}']["Machine"]["Force"].dropna()
+                plt.plot(a,b,label=i+1)
+                if not x.empty and not y.empty:
+                    plt.scatter(x.iloc[-1], y.iloc[-1], s=70, marker="*")
+                if not a.empty and not b.empty:
+                    plt.scatter(a.iloc[-1], b.iloc[-1], s=70, marker="*")
+
+            except KeyError:
+                continue
+
+        plt.xlabel("Displacement, mm")
+        plt.ylabel("Force, kN")
+        plt.title(test)
+        handles, labels = plt.gca().get_legend_handles_labels()
+        unique = dict(zip(labels, handles))  # Removes duplicates by keeping only the last occurrence
+        plt.legend(unique.values(), unique.keys())
+
+        if setting_fn:
+            setting_fn()
+
+
+        buffer = BytesIO()
+        plt.savefig(buffer, format='PNG', bbox_inches='tight')
+        buffer.seek(0)  # Reset buffer's position to the start
+        buffers.append(buffer)
+    return buffers
+    
+
+def fracture_summary(path,sheet_name,setting_fn=None):
+    data_frame = pd.read_excel(path,sheet_name=sheet_name,header=([0,1,2]),index_col=0)
+    old_list = data_frame.columns.get_level_values(0).unique().tolist()
+    new_list = list({s.rsplit('_', 1)[0] for s in old_list})
+    plt.clf()
+    for index, test in enumerate(new_list):
+        try:
+            x = data_frame[f'{str(test)}_{2}']["Disp_Y"]["∆L [mm]"].dropna()
+            y = data_frame[f'{str(test)}_{2}']["Machine"]["Force"].dropna()
+            plt.plot(x,y,label=str(test)[-2:])
+            if not x.empty and not y.empty:
+                plt.scatter(x.iloc[-1], y.iloc[-1], s=70, marker="*")
+        except KeyError:
+            continue
+        except ValueError:
+            min_len = min(len(x), len(y))
+            x = x.iloc[:min_len]
+            y = y.iloc[:min_len]
+            plt.plot(x,y,label=str(test)[-2:])
+
+            
+        plt.xlabel("Displacement, mm")
+        plt.ylabel("Force, kN")
+        plt.title(sheet_name)
+        plt.legend()
+        if setting_fn:
+            setting_fn()
+
+
+    buffer = BytesIO()
+    plt.savefig(buffer, format='PNG', bbox_inches='tight')
+    buffer.seek(0)  # Reset buffer's position to the start
+    
+    return buffer
+    
+
+def fracture_compare_summary(path,sheet_names,setting_fn=None):
+    plt.clf()
+
+    label_color_map = {}
+    color_list = ["blue", "red", "green", "orange", "purple", "brown", "pink", "gray", "olive", "cyan"]
+    color_no = 0
+    for sheet_name in sheet_names:
+        data_frame = pd.read_excel(path,sheet_name=sheet_name,header=([0,1,2]),index_col=0)
+        old_list = data_frame.columns.get_level_values(0).unique().tolist()
+        new_list = list({s.rsplit('_', 1)[0] for s in old_list})
+        for index, test in enumerate(new_list):
+            try:
+                x = data_frame[f'{str(test)}_{2}']["Disp_Y"]["∆L [mm]"].dropna()
+                y = data_frame[f'{str(test)}_{2}']["Machine"]["Force"].dropna()
+                label=str(test)[-2:]
+                if label not in label_color_map:
+                    label_color_map[label] = color_list[color_no % len(color_list)]
+                    color_no += 1
+                plt.plot(x,y,label=label,color=label_color_map[label])
+                if not x.empty and not y.empty:
+                    plt.scatter(x.iloc[-1], y.iloc[-1], s=70, marker="*")
+            except KeyError:
+                continue
+            except ValueError:
+                min_len = min(len(x), len(y))
+                x = x.iloc[:min_len]
+                y = y.iloc[:min_len]
+                plt.plot(x,y,label=str(test)[-2:])
+
+                
+            plt.xlabel("Displacement, mm")
+            plt.ylabel("Force, kN")
+            plt.legend()
+            if setting_fn:
+                setting_fn()
+
+    handles, labels = plt.gca().get_legend_handles_labels()
+    unique = dict(zip(labels, handles))  # Removes duplicates by keeping only the last occurrence
+    plt.legend(unique.values(), unique.keys())
+
+
+    buffer = BytesIO()
+    plt.savefig(buffer, format='PNG', bbox_inches='tight')
+    buffer.seek(0)  # Reset buffer's position to the start
+    
+    return buffer
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def summary(path,sheet_name,func_name,letters=False,setting_fn=None):
+    plt.clf()
+    
+    x_name,y_name,xlabel,ylabel=xy_values(func_name)
+    data_frame = pd.read_excel(path,sheet_name=sheet_name,header=([0,1,2]),index_col=0)
+    tests_list = data_frame.columns.get_level_values(0).unique().tolist()
+    #assign direction to test number
+    tests_series = {s : s.split('_', 2)[1] for s in tests_list}
+    #creat a list containing all directions
+    directions = list(set(tests_series.values()))
+    geo_name = tests_list[0].split("_",1)[0]
+    buffers = []
+    if letters:
+        directions = ['RD', 'DD', 'TD']
+    for dire in directions:
+        test_name = f'{geo_name}_{dire}_{2}'
+        x = data_frame[test_name]["Calculation"][x_name]
+        y = data_frame[test_name]["Calculation"][y_name]
+        start_index = x[x > 0.0001].index[0]  
+        x = x.loc[start_index:]          
+        y = y.loc[start_index:] 
+
+        plt.plot(x,y,label=f'{dire}',)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+
+    if func_name == "r-value":
+        plt.xlim(left=(0.01))
+        plt.ylim([0,2])
+    plt.legend()
+    plt.title(func_name)
+ 
+
+    buffer = BytesIO()
+    plt.savefig(buffer, format='PNG', bbox_inches='tight')
+    buffer.seek(0)  # Reset buffer's position to the start
+    return buffer.getvalue()
+
+
+
+def Normalized_plot(path,quality="Displacement"):
+    #plot the direction dependency of properties.
+    
+    row1="Disp_Y"			
+    row2="∆L [mm]"			
+
+    if quality=="Force":
+        row1="Machine"			
+        row2="Force"			
+
+    plt.clf()
+ 
+    rdx=[]
+    ddx=[]
+    tdx=[]
+    yyy=[]
+    sheet_names=[ 'NDBR25', 'NDBR6', 'NDBR2', 'NDBR02', 'SH','CHD6']
+
+    for sheet_name in sheet_names:
+        data_frame = pd.read_excel(path,sheet_name=sheet_name,header=([0,1,2]),index_col=0)
+        old_list = data_frame.columns.get_level_values(0).unique().tolist()
+        new_list = list({s.rsplit('_', 1)[0] for s in old_list})
+        for test in (new_list):
+            print(sheet_name+"AND "+test)
+
+            #print(test)
+            x = data_frame[f'{str(test)}_{1}'][row1][row2].dropna()
+            if ((str(test)[-2:])=="DD"):
+                try:
+                    ddx.append((x.iloc[-1:]).tail(1).values[0])
+                except IndexError:
+                    ddx.append(None)
+
+            if ((str(test)[-2:])=="RD"):
+                try:
+                    rdx.append((x.iloc[-1:]).tail(1).values[0])
+                except IndexError:
+                    rdx.append(None)            
+            if ((str(test)[-2:])=="TD"):
+                try:
+                    tdx.append((x.iloc[-1:]).tail(1).values[0])
+                except IndexError:
+                    tdx.append(None)
+
+
+    result_rd = [a / b if a is not None and b is not None else None for a, b in zip(rdx, rdx)]
+    result_dd = [a / b if a is not None and b is not None else None for a, b in zip(ddx, rdx)]
+    result_td = [a / b if a is not None and b is not None else None for a, b in zip(tdx, rdx)]
+
+    print(result_rd)
+    print(result_dd)
+    print(result_td)
+
+    print(yyy)
+
+
+ 
+
+    plt.plot(sheet_names, result_rd, 'o-', label='RD', color='green')
+    plt.plot(sheet_names, result_dd, '^-', label='DD', color='red')
+    plt.plot(sheet_names, result_td, 's-', label='TD', color='blue')
+
+     
+    plt.legend()
+    
+    plt.ylabel(f"Normalized fracture {quality}, -")
+
+    plt.show()
+    buffer = BytesIO()
+    plt.savefig(buffer, format='PNG', bbox_inches='tight')
+    buffer.seek(0)  # Reset buffer's position to the start
+    return buffer.getvalue()
+   
+ ################
+
+
+
+ ################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ###########REMAKE
 
 def fracture_compare(path,sheet_name,materials,setting_fn=None):
@@ -569,6 +891,9 @@ def fracture_compare(path,sheet_name,materials,setting_fn=None):
     old_list = data_frame.columns.get_level_values(0).unique().tolist()
     new_list = list({s.rsplit('_', 1)[0] for s in old_list})
  
+
+
+
 
 
 
@@ -659,9 +984,71 @@ def r_plot(path,sheet_name):
 
 
 
+def falcon (path,sheet_name,func_name,setting_fn=None):
+
+    x_name,y_name,xlabel,ylabel=xy_values(func_name)
+    data_frame = pd.read_excel(path,sheet_name=sheet_name,header=([0,1,2]),index_col=0)
+    tests_list = data_frame.columns.get_level_values(0).unique().tolist()
+    tests_series = {s : s.split('_', 2)[1] for s in tests_list}
+    directions = list(set(tests_series.values()))
+    geo_name = tests_list[0].split("_",1)[0]
+    buffers = []
+    for dire in directions:
+        plt.clf()
+        for i in range(6):
+            test_name = f'{geo_name}_{dire}_{i+1}'
+            try:
+                x = data_frame[test_name]["Calculation"][x_name]
+                y = data_frame[test_name]["Calculation"][y_name]
+                youngs_modulus = data_frame[test_name]["Calculation"]["Young's modulus"][0]
+                print(youngs_modulus)
+                start_index = x[x > 0.0001].index[0]  
+                x = x.loc[start_index:]          
+                y = y.loc[start_index:] 
+                print("EE",find_yield_stress(y,x,youngs_modulus))
+                plt.plot(x,y,label=f'{i+1}')
+                plt.xlabel(xlabel)
+                plt.ylabel(ylabel)
+            except KeyError:
+                continue
+        if func_name == "r-value":
+            
+            plt.ylim([0,2])
+        plt.legend()
+        plt.title(dire)
+        plt.rcParams['font.family'] = 'Arial'
+        plt.rcParams['font.size'] = 16
+    return buffers
+
+ 
+
+def find_yield_stress(stress, strain, youngs_modulus, offset=0.002):
+    stress = np.array(stress)
+    strain = np.array(strain)
+    
+    # Calculate the offset line: σ_offset = E * (strain + offset)
+    offset_line = youngs_modulus/100 * (strain + offset)
+    
+    # Find the first point where stress exceeds offset line
+    for i in range(1, len(stress)):
+        #print(stress[i],"FUCK",offset_line[i])
+        if stress[i] >= offset_line[i]:
+            # Interpolate to get a more precise yield stress
+            yield_stress = np.interp(
+                offset_line[i],  # Target value
+                stress[i-1:i+1],  # Stress values around the intersection
+                stress[i-1:i+1]  # Strain values around the intersection
+            )
+            return yield_stress
+
+    return None  # If no intersection is found
+
+# Example Usage
+ 
+
+def main():
+    Normalized_plot("Excel_raw/QP1400.xlsx","Force")
+if __name__ == '__main__':
+  main()
 
 
-
-if __name__ == "__main__":
-    pass
-    # repeatablity("Excel_processed\QP1400_SDB.xlsx","Sheet1","engineering")

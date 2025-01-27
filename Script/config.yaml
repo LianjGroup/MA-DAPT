@@ -3,7 +3,7 @@ matplotlib:
     family: Arial
     size: 16
   axes:
-    labelsize: 16
+    labelsize: 10
     titlesize: 16
   legend:
     on: True

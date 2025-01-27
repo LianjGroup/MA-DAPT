@@ -17,11 +17,11 @@ import tkinter as tk
 from tkinter import  messagebox,ttk,filedialog     
 import pandas as pd
 import os
-import shutil 
-from PIL import Image, ImageTk
+import yaml
+from PIL import Image, ImageTk, ImageGrab
 import Improved as im
 import ctypes     
-
+import win32clipboard
 #import Mypackage.Mymodule as mm Previous code
 
 
@@ -46,15 +46,18 @@ class App(tk.Tk):    # Basic App blueprint. Tabs with features are added to it
           messagebox.showerror("Error","Can't find any Excel files")
 
       self.buffer=BufferStorage()
-      self.show_photo_button = ttk.Button(self, text="Show Photo", command=self.buffer.get_photos)
+      
+ 
+      self.show_photo_button = ttk.Button(self, text="Fuck", command=lambda:Settings(self))
       self.show_photo_button.pack(pady=20)
       
       
-      self.calc_tab = CalcTab(self,self.notebook,material_result[1]) 
+      self.plas_tab = PlasTab(self,self.notebook,material_result[2],self.buffer) 
+      self.organize_tab = OrganizeEverythingTab(self,self.notebook,material_result[2],self.buffer)    
+     # self.calc_tab = CalcTab(self,self.notebook,material_result[1]) 
       self.frac_tab = FracTab(self,self.notebook,material_result[1],self.buffer)
       self.ani_tab =  AnisTab(self,self.notebook,material_result[2],self.buffer) 
       self.comp_tab = CompTab(self,self.notebook,material_result[2],self.buffer) 
-      self.plas_tab = PlasTab(self,self.notebook,material_result[2],self.buffer) 
      
 
 
@@ -75,7 +78,7 @@ class BufferStorage:
         self.data_buffer.append(data)
 
     def get_photos(self):
-      print(len(self.photo_buffer))
+      #print(len(self.photo_buffer))
       return self.photo_buffer
 
     def get_data(self):
@@ -107,7 +110,11 @@ def validate_input(new_value): #Ensures only numbers can be entered
     return False
 
 
-
+def send_to_clipboard(clip_type, data):
+    win32clipboard.OpenClipboard()
+    win32clipboard.EmptyClipboard()
+    win32clipboard.SetClipboardData(clip_type, data)
+    win32clipboard.CloseClipboard()
 
 class ImageGrid(tk.Toplevel):
     def __init__(self, parent, image_buffers):
@@ -149,7 +156,17 @@ class ImageGrid(tk.Toplevel):
             self.destroy()
         self.protocol("WM_DELETE_WINDOW", cleanup)
 
-
+    def copy_image_to_clipboard(self, img):
+        # Convert PhotoImage to a PIL Image object
+        pil_image = Image.open(io.BytesIO(img._PhotoImage__photo.tobytes()))
+        
+        # Convert PIL Image to PhotoImage again (to be compatible with tkinter clipboard)
+        tk_img = ImageTk.PhotoImage(pil_image)
+        
+        # Clear the clipboard and append the image
+        self.clipboard_clear()
+        self.clipboard_append(tk_img)
+        self.update()  
 
     def saveall(self):
         for img in self.images:
@@ -181,9 +198,11 @@ class ImageGrid(tk.Toplevel):
             button_container.pack(pady=5)
             label.image = img
             save_button = ttk.Button(button_container, text="Save As ", command=lambda img=img: self.save_image(img))
-            save_button.pack(padx=5)
+            save_button.pack(padx=5,side="left")
             save_as_button = ttk.Button(button_container, text="Save Image", command=lambda img=img: self.save_image(img,True))
-            save_as_button.pack(side="right")
+            save_as_button.pack(side="left")
+            copy_button = ttk.Button(button_container, text="Copy",command=lambda img=img: self.copy_image_to_clipboard(img))
+            copy_button.pack(side="left")
         else:
           for i, img in enumerate(self.images):
               container = ttk.Frame(self.image_frame)
@@ -196,12 +215,17 @@ class ImageGrid(tk.Toplevel):
 
               label.image = img  # Keep a reference to avoid garbage collection
               save_button = ttk.Button(button_container, text="Save As ", command=lambda img=img: self.save_image(img))
-              save_button.pack(padx=5)
+              save_button.pack(padx=5,side="left")
               save_as_button = ttk.Button(button_container, text="Save Image", command=lambda img=img: self.save_image(img,True))
-              save_as_button.pack(side="right",padx=5)
+              save_as_button.pack(side="left",padx=5)
+              copy_button = ttk.Button(button_container, text="Copy",command=lambda img=img: self.copy_image_to_clipboard(img))
+              copy_button.pack(side="left")
             # button1.grid(row=1, column=0)
               #button2.grid(row=1, column=1)
               #button3.grid(row=1, column=2)
+    def copy_image_to_clipboard(self, img):
+         return 0
+
     def save_image(self, img,location=False):
         if location:
             save_path = f"Saved{os.sep}Graph.png"
@@ -223,16 +247,77 @@ class ImageGrid(tk.Toplevel):
 
 
 
+
 class Settings(tk.Toplevel):
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.title("Settings")
-        self.geometry("800x600")
-
-      
+  def __init__(self, parent):
+      super().__init__(parent)
+      self.title("Settings")
+      self.geometry("800x600")
 
 
+      self.font_family_var = tk.StringVar()
+      self.font_size_var = tk.StringVar()
+      self.axes_labelsize_var = tk.StringVar()
+      self.legend_on_var = tk.StringVar()
+      self.legend_fontsize_var = tk.StringVar()
+      self.raw_files_var = tk.StringVar()
+      self.processed_files_var = tk.StringVar()
+      self.save_location_var = tk.StringVar()
+      self.axes_titlesize_var = tk.StringVar()
+  
+      with open(f'Script{os.sep}config.yaml', "r") as file:
+          self.settings= yaml.safe_load(file)
 
+      self.font_family_var.set(self.settings["matplotlib"]["font"]["family"])
+      self.font_size_var.set(str(self.settings["matplotlib"]["font"]["size"]))
+      self.axes_labelsize_var.set(str(self.settings["matplotlib"]["axes"]["labelsize"]))
+      self.axes_titlesize_var.set(str(self.settings["matplotlib"]["axes"]["titlesize"]))
+ #     self.legend_on_var.set(str(self.settings["matplotlib"]["legend"]["on"]))
+      self.legend_fontsize_var.set(str(self.settings["matplotlib"]["legend"]["fontsize"]))
+      self.raw_files_var.set(self.settings["file_paths"]["raw_files_location"])
+      self.processed_files_var.set(self.settings["file_paths"]["processed_files_location"])
+      self.save_location_var.set(self.settings["file_paths"]["save_location"])
+  
+  
+      ttk.Label(self, text="Font Family:").grid(row=1, column=0, sticky="w", padx=10)
+      ttk.Entry(self, textvariable=self.font_family_var).grid(row=1, column=1, padx=10)
+
+      ttk.Label(self, text="Font Size:").grid(row=2, column=0, sticky="w", padx=10)
+      ttk.Entry(self, textvariable=self.font_size_var).grid(row=2, column=1, padx=10)
+
+      ttk.Label(self, text="Axes Label Size:").grid(row=3, column=0, sticky="w", padx=10)
+      ttk.Entry(self, textvariable=self.axes_labelsize_var).grid(row=3, column=1, padx=10)
+
+      ttk.Label(self, text="Axes Title Size:").grid(row=4, column=0, sticky="w", padx=10)
+      ttk.Entry(self, textvariable=self.axes_titlesize_var).grid(row=4, column=1, padx=10)
+
+      ttk.Label(self, text="Legend On:").grid(row=5, column=0, sticky="w", padx=10)
+      ttk.Combobox(self, textvariable=self.legend_on_var, values=["True", "False"], state="readonly").grid(row=5, column=1, padx=10)
+
+      ttk.Label(self, text="Legend Font Size:").grid(row=6, column=0, sticky="w", padx=10)
+      ttk.Entry(self, textvariable=self.legend_fontsize_var).grid(row=6, column=1, padx=10)
+
+      ttk.Label(self, text="File Paths", font=("Arial", 14, "bold")).grid(row=7, column=0, columnspan=2, pady=10)
+
+      ttk.Label(self, text="Raw Files Location:").grid(row=8, column=0, sticky="w", padx=10)
+      ttk.Entry(self, textvariable=self.raw_files_var).grid(row=8, column=1, padx=10)
+
+      ttk.Label(self, text="Processed Files Location:").grid(row=9, column=0, sticky="w", padx=10)
+      ttk.Entry(self, textvariable=self.processed_files_var).grid(row=9, column=1, padx=10)
+
+      ttk.Label(self, text="Save Location:").grid(row=10, column=0, sticky="w", padx=10)
+      ttk.Entry(self, textvariable=self.save_location_var).grid(row=10, column=1, padx=10)
+
+    
+
+ 
+      def save_settings():
+        print("Impletment later")
+      ttk.Button(self, text="Save Settings", command=save_settings).grid(row=11, column=1, pady=20)
+            
+  def save_yaml(self, data):
+      with open("config.yaml", "w") as file:
+          yaml.safe_dump(data, file)
  
 # Calculation Tab
  
@@ -419,9 +504,18 @@ class PlasTab(ttk.Frame):
         
 
    
+    def falconcaller():
+      path = f"{Excel_processed}{os.sep}{self.selected_mat.get()}.xlsx"
+      selected = [prop for prop, var in self.property_vars.items() if var.get()]
+      for p in selected:
+        im.falcon(path,"Sheet1",p)
+        
    
     repeat_button=ttk.Button(properties_frame,text="Repeat",command=lambda :repeatablity_caller())
     repeat_button.pack(pady=3)  
+   
+    repweat_button=ttk.Button(properties_frame,text="NOT WORKing",command=lambda :falconcaller())
+    repweat_button.pack(pady=3)  
 
     def size_effect():
       selected_indices = [idx for idx, var in self.property_vars.items() if var.get()]
@@ -524,8 +618,27 @@ class FracTab(ttk.Frame):
           for b in bufs:
             buffer.add_photo(b.getvalue())
         ImageGrid(self,buffer)  
+    
+    def frac_summary(path,var):  
+      for header in var:
+        buffer.add_photo(im.fracture_summary(path,  header).getvalue())
+      ImageGrid(self,buffer)  
         
 
+    def frac_summary_multiple(path,var):  
+      buffer.add_photo(im.fracture_compare_summary(path,  var).getvalue())
+      ImageGrid(self,buffer)  
+        
+
+ 
+    def frac_one_name(path,var):  
+      ans=im.fracture_normal_compare(path,  var)
+      for i in ans:
+        buffer.add_photo(i.getvalue())
+      ImageGrid(self,buffer)  
+        
+
+ 
  
 
 
@@ -551,8 +664,7 @@ class FracTab(ttk.Frame):
           self.checkbox_vars[header] = var
           checkbox.pack(anchor="w", pady=2,padx=50)
 
-        def get_selected(): # Collect the ticked boxses
-            
+        def get_selected(): # Collect the ticked boxses    
             selected = [header for header, var in self.checkbox_vars.items() if var.get()]
             return selected
 
@@ -612,7 +724,12 @@ class FracTab(ttk.Frame):
         confirm_button.pack(padx=50)
         compare_button=ttk.Button(right_frame,text="Compare",command= lambda:frac_compare(path,get_selected()))           
         compare_button.pack(padx=50)
-    
+        summary_button=ttk.Button(right_frame,text="Summary",command= lambda:frac_summary(path,get_selected()))           
+        summary_button.pack(padx=50)
+        summary_button_compare=ttk.Button(right_frame,text="Sum comp",command= lambda:frac_summary_multiple(path,get_selected()))           
+        summary_button_compare.pack(padx=50)
+        confirm_compare_button=ttk.Button(right_frame,text="confirm comp",command= lambda:frac_one_name(path,get_selected()))           
+        confirm_compare_button.pack(padx=50)
 
 
     for material in (materials):  #Add materials
@@ -841,6 +958,94 @@ class AnisTab(ttk.Frame):
 
 
 
+
+class OrganizeEverythingTab(ttk.Frame):
+  def __init__(self,parent, notebook,materials,buffer):
+    super().__init__(parent)
+    Excel_processed=address()[1]
+
+    notebook.add(self, text="ORGANIZE")
+
+    mat_title = ttk.Label(self, text="Materials", font=("Arial", 15))
+    mat_title.pack(pady=20,anchor="nw",padx=37)
+
+    canvas=tk.Canvas(self, 
+                     scrollregion=(0,0,0,len(materials)*45),
+                     width=10,
+                     highlightthickness=0)
+    canvas.pack(side="left",expand=True,fill="both")
+    
+    
+    left_frame=ttk.Frame(canvas)
+    canvas.create_window((20,20), window=left_frame, anchor="nw")
+ 
+
+
+    self.selected_mat = tk.StringVar(value="")
+
+    for material in (materials):
+      radio = ttk.Radiobutton(left_frame, 
+                              text=material,
+                               value=material,
+                                 variable=self.selected_mat)
+      radio.pack(anchor="sw",pady=3)
+
+
+    ''''Middle Frame'''
+    
+
+    properties_frame=ttk.Frame(self)
+    properties_frame.pack(side="left",padx=15,expand=True,fill="both",anchor="n")
+
+
+    prop_title = ttk.Label(properties_frame, text="Graph", font=("Arial", 15))
+    prop_title.pack(pady=20)
+
+    prop_separator = ttk.Separator(properties_frame, orient="horizontal")
+    prop_separator.pack(pady=1)  
+
+    properties = ["engineering", "true", "effective plastic strain","r-value"] 
+    self.property_vars = {}
+    for prop in (properties):
+      var = tk.BooleanVar(value=False)   
+      chk = ttk.Checkbutton(properties_frame, text=prop, variable=var)
+      self.property_vars[prop] = var
+      chk.pack(anchor="sw", pady=2) 
+
+
+    
+    
+    prop_separator = ttk.Separator(properties_frame, orient="horizontal")
+    prop_separator.pack(pady=1)  
+
+
+    def summary(letters=False):
+      path = f"{Excel_processed}{os.sep}{self.selected_mat.get()}.xlsx"
+      selected = [prop for prop, var in self.property_vars.items() if var.get()]
+      for p in selected:
+        buffer.add_photo(im.summary(path,"Sheet1",p,letters) )
+         
+
+      ImageGrid(self,buffer)
+
+
+    summary_button=ttk.Button(properties_frame,text="Summary",command=lambda :summary())
+    summary_button.pack(pady=3)
+
+ 
+
+    Lsummary_button=ttk.Button(properties_frame,text="LSummary",command=lambda :summary(True))
+    Lsummary_button.pack(pady=3)
+
+
+
+    
+   
+ 
+
+    scrollbar=ttk.Scrollbar(self,orient="vertical",command=canvas.yview)
+    scrollbar.pack(side="right", fill="y")
+    canvas.configure(yscrollcommand=scrollbar.set)
 
 
  
