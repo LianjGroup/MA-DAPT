@@ -3,11 +3,21 @@
 An application to visulate tensile test data with an easy to use GUI
 
 
+## HOw to use
+
+1. Download release
+2. Extract MA_DAPT folder
+3. Run executable
+   
+
 ## FEATURES TO ADD
+
+### Add to issue tab
+
+
 
 ### Priority 1
 - Fix comparison buttons to make them faster by opening the files are the start
-- Add back save buttons
 - Add other uts type function
 - Normalize uts type function
 - Change UTS type fucntions x label
@@ -24,4 +34,4 @@ An application to visulate tensile test data with an easy to use GUI
 - See if they are better options for gui or a better way to organize them
 
 ### Testing 
-- Calculation tab maynot give proper results. More testing needed to find all issues
+- Calculation tab may not give proper results. More testing needed to find all issues
