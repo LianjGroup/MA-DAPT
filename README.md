@@ -18,8 +18,7 @@ An application to visulate tensile test data with an easy to use GUI
 
 ### Priority 1
 - Fix comparison buttons to make them faster by opening the files are the start
-- Add other uts type function
-- Normalize uts type function
+ - Normalize uts type function
 - Change UTS type fucntions x label
 
 ### Priority 2
@@ -34,4 +33,5 @@ An application to visulate tensile test data with an easy to use GUI
 - See if they are better options for gui or a better way to organize them
 
 ### Testing 
-- Calculation tab may not give proper results. More testing needed to find all issues
+- Find 0.2 for yield
+
