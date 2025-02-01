@@ -22,6 +22,7 @@ from PIL import Image, ImageTk, ImageGrab
 import Improved as im
 import ctypes     
 import win32clipboard
+import win32con
 #import Mypackage.Mymodule as mm Previous code
 
 
@@ -54,7 +55,7 @@ class App(tk.Tk):    # Basic App blueprint. Tabs with features are added to it
       
       self.plas_tab = PlasTab(self,self.notebook,material_result[2],self.buffer) 
       self.organize_tab = OrganizeEverythingTab(self,self.notebook,material_result[2],self.buffer)    
-     # self.calc_tab = CalcTab(self,self.notebook,material_result[1]) 
+      self.calc_tab = CalcTab(self,self.notebook,material_result[1]) 
       self.frac_tab = FracTab(self,self.notebook,material_result[1],self.buffer)
       self.ani_tab =  AnisTab(self,self.notebook,material_result[2],self.buffer) 
       self.comp_tab = CompTab(self,self.notebook,material_result[2],self.buffer) 
@@ -110,10 +111,16 @@ def validate_input(new_value): #Ensures only numbers can be entered
     return False
 
 
-def send_to_clipboard(clip_type, data):
+def send_to_clipboard(name):
+    image = Image.open(name)
+    output = io.BytesIO()
+    image.convert('RGB').save(output, 'BMP')
+    data = output.getvalue()[14:]
+    output.close()
+
     win32clipboard.OpenClipboard()
     win32clipboard.EmptyClipboard()
-    win32clipboard.SetClipboardData(clip_type, data)
+    win32clipboard.SetClipboardData(win32clipboard.CF_DIB, data)
     win32clipboard.CloseClipboard()
 
 class ImageGrid(tk.Toplevel):
@@ -156,17 +163,6 @@ class ImageGrid(tk.Toplevel):
             self.destroy()
         self.protocol("WM_DELETE_WINDOW", cleanup)
 
-    def copy_image_to_clipboard(self, img):
-        # Convert PhotoImage to a PIL Image object
-        pil_image = Image.open(io.BytesIO(img._PhotoImage__photo.tobytes()))
-        
-        # Convert PIL Image to PhotoImage again (to be compatible with tkinter clipboard)
-        tk_img = ImageTk.PhotoImage(pil_image)
-        
-        # Clear the clipboard and append the image
-        self.clipboard_clear()
-        self.clipboard_append(tk_img)
-        self.update()  
 
     def saveall(self):
         for img in self.images:
@@ -201,7 +197,7 @@ class ImageGrid(tk.Toplevel):
             save_button.pack(padx=5,side="left")
             save_as_button = ttk.Button(button_container, text="Save Image", command=lambda img=img: self.save_image(img,True))
             save_as_button.pack(side="left")
-            copy_button = ttk.Button(button_container, text="Copy",command=lambda img=img: self.copy_image_to_clipboard(img))
+            copy_button = ttk.Button(button_container, text="Copy",command=lambda img=img:self.save_image(img,True,True))
             copy_button.pack(side="left")
         else:
           for i, img in enumerate(self.images):
@@ -218,23 +214,29 @@ class ImageGrid(tk.Toplevel):
               save_button.pack(padx=5,side="left")
               save_as_button = ttk.Button(button_container, text="Save Image", command=lambda img=img: self.save_image(img,True))
               save_as_button.pack(side="left",padx=5)
-              copy_button = ttk.Button(button_container, text="Copy",command=lambda img=img: self.copy_image_to_clipboard(img))
+              copy_button = ttk.Button(button_container, text="Copy",command=lambda img=img: self.save_image(img,True,True))
               copy_button.pack(side="left")
             # button1.grid(row=1, column=0)
               #button2.grid(row=1, column=1)
               #button3.grid(row=1, column=2)
-    def copy_image_to_clipboard(self, img):
-         return 0
+ 
 
-    def save_image(self, img,location=False):
+    def save_image(self, img,location=False,clipboard=False):
         if location:
-            save_path = f"Saved{os.sep}Graph.png"
-            base, ext = os.path.splitext(save_path)
-            counter = 1
-            while os.path.exists(save_path):
-              save_path = f"{base}_{counter}{ext}"
-              counter += 1
-            img._PhotoImage__photo.write(save_path)
+          save_path = f"Saved{os.sep}Graph.png"
+          base, ext = os.path.splitext(save_path)
+          counter = 1
+          while os.path.exists(save_path):
+            save_path = f"{base}_{counter}{ext}"
+            counter += 1
+          img._PhotoImage__photo.write(save_path)
+          if clipboard:
+            send_to_clipboard(save_path)
+            os.remove(save_path)
+          
+  
+
+
         else:
           file_path = filedialog.asksaveasfilename(defaultextension=".png",
                                                   filetypes=[("PNG files", "*.png"),
@@ -555,14 +557,29 @@ class PlasTab(ttk.Frame):
     def uts():
         path = f"{Excel_processed}{os.sep}{self.selected_mat.get()}.xlsx"
         buffer.add_photo(im.uts_plot(path,"Sheet1"))
-
-
         ImageGrid(self,buffer) 
    
    
     yts_button=ttk.Button(properties_frame, text="UTS", command=uts)
     yts_button.pack(pady=3)
 
+    def Ys():
+        path = f"{Excel_processed}{os.sep}{self.selected_mat.get()}.xlsx"
+        buffer.add_photo(im.yield_stress_plot(path,"Sheet1"))
+        ImageGrid(self,buffer) 
+   
+   
+    Y_button=ttk.Button(properties_frame, text="Yield Stress", command=Ys)
+    Y_button.pack(pady=3)
+
+    def yieldr():
+        path = f"{Excel_processed}{os.sep}{self.selected_mat.get()}.xlsx"
+        buffer.add_photo(im.yield_r_plot(path,"Sheet1"))
+        ImageGrid(self,buffer) 
+   
+   
+    R_button=ttk.Button(properties_frame, text="R values", command=yieldr)
+    R_button.pack(pady=3)
 
     def r_elong():
         path = f"{Excel_processed}{os.sep}{self.selected_mat.get()}.xlsx"

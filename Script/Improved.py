@@ -188,12 +188,12 @@ def FDplot(series_list):
         mainID = series["mainID"]
         
         # Extract x and y data, dropping NaN values
-        x = sheet[mainID][series['x_name']].dropna()
-        y = sheet[mainID][series['y_name']].dropna()
+        x = sheet[mainID][series["x_name"]].dropna()
+        y = sheet[mainID][series["y_name"]].dropna()
         
         # Check if x or y data is empty
         if x.empty or y.empty:
-            print(f"Data for series '{series.get('label', mainID)}' is empty. Skipping this series.")
+            print(f"Data for series {series.get('label', mainID)} is empty. Skipping this series.")
             continue  # Skip to the next series
         
         # Retrieve plotting parameters with defaults
@@ -266,7 +266,7 @@ def calculation(path,sheet_name,stress_limit=500,modified=False):
         Force = data_frame[test_name]["Machine"]["Force"]
         y_strain = 100*data_frame[test_name]["DIC_Y"]["∆L/L0"]
         x_strain = 100*data_frame[test_name]["DIC_X"]["∆L/L0"]
-        eng_stress = (Force/S0)*1000000000
+        eng_stress = (Force/S0)*1000
         print("dea")
 
 
@@ -345,7 +345,7 @@ def get_max_E(path,sheet_name,stress_limit=500):
             continue
         Force = data_frame[test_name]["Machine"]["Force"]
         y_strain = data_frame[test_name]["DIC_Y"]["∆L/L0"]
-        eng_stress = Force/S0*1000000000
+        eng_stress = Force/S0*1000
 
         print("CCCCCCCCCC\n", eng_stress)
         print("DDDDDDDDDDDD\n", y_strain)
@@ -680,7 +680,7 @@ def fracture_compare_summary(path,sheet_names,setting_fn=None):
     plt.clf()
 
     label_color_map = {}
-    color_list = ["blue", "red", "green", "orange", "purple", "brown", "pink", "gray", "olive", "cyan"]
+    color_list = ["blue", "red", "green", "blue", "red", "green", "blue", "red", "green"]
     color_no = 0
     for sheet_name in sheet_names:
         data_frame = pd.read_excel(path,sheet_name=sheet_name,header=([0,1,2]),index_col=0)
@@ -696,7 +696,7 @@ def fracture_compare_summary(path,sheet_names,setting_fn=None):
                     color_no += 1
                 plt.plot(x,y,label=label,color=label_color_map[label])
                 if not x.empty and not y.empty:
-                    plt.scatter(x.iloc[-1], y.iloc[-1], s=70, marker="*")
+                    plt.scatter(x.iloc[-1], y.iloc[-1], s=70, color=label_color_map[label],marker="*")
             except KeyError:
                 continue
             except ValueError:
@@ -709,6 +709,7 @@ def fracture_compare_summary(path,sheet_names,setting_fn=None):
             plt.xlabel("Displacement, mm")
             plt.ylabel("Force, kN")
             plt.legend()
+
             if setting_fn:
                 setting_fn()
 
@@ -984,70 +985,370 @@ def r_plot(path,sheet_name):
 
 
 
-def falcon (path,sheet_name,func_name,setting_fn=None):
+# def falcon (path,sheet_name,func_name,setting_fn=None):
 
-    x_name,y_name,xlabel,ylabel=xy_values(func_name)
+#     x_name,y_name,xlabel,ylabel=xy_values(func_name)
+#     data_frame = pd.read_excel(path,sheet_name=sheet_name,header=([0,1,2]),index_col=0)
+#     tests_list = data_frame.columns.get_level_values(0).unique().tolist()
+#     tests_series = {s : s.split('_', 2)[1] for s in tests_list}
+#     directions = list(set(tests_series.values()))
+#     geo_name = tests_list[0].split("_",1)[0]
+#     buffers = []
+#     for dire in directions:
+#         plt.clf()
+#         for i in range(6):
+#             test_name = f'{geo_name}_{dire}_{i+1}'
+#             try:
+#                 x = data_frame[test_name]["Calculation"][x_name]
+#                 y = data_frame[test_name]["Calculation"][y_name]
+#                 youngs_modulus = data_frame[test_name]["Calculation"]["Young's modulus"][0]
+#                 print(youngs_modulus)
+#                 start_index = x[x > 0.0001].index[0]  
+#                 x = x.loc[start_index:]          
+#                 y = y.loc[start_index:] 
+#                 print("EE",find_yield_stress(y,x,youngs_modulus))
+#                 plt.plot(x,y,label=f'{i+1}')
+#                 plt.xlabel(xlabel)
+#                 plt.ylabel(ylabel)
+#             except KeyError:
+#                 continue
+#         if func_name == "r-value":
+            
+#             plt.ylim([0,2])
+#         plt.legend()
+#         plt.title(dire)
+#         plt.rcParams['font.family'] = 'Arial'
+#         plt.rcParams['font.size'] = 16
+#     return buffers
+
+ 
+
+# def find_yield_stress(stress, strain, youngs_modulus, offset=0.002):
+#     stress = np.array(stress)
+#     strain = np.array(strain)
+    
+#     # Calculate the offset line: σ_offset = E * (strain + offset)
+#     offset_line = youngs_modulus/100 * (strain + offset)
+    
+#     # Find the first point where stress exceeds offset line
+#     for i in range(1, len(stress)):
+#         #print(stress[i],"FUCK",offset_line[i])
+#         if stress[i] >= offset_line[i]:
+#             # Interpolate to get a more precise yield stress
+#             yield_stress = np.interp(
+#                 offset_line[i],  # Target value
+#                 stress[i-1:i+1],  # Stress values around the intersection
+#                 stress[i-1:i+1]  # Strain values around the intersection
+#             )
+#             return yield_stress
+
+#     return None  # If no intersection is found
+
+# # Example Usage
+ 
+
+# def find_intersection_points(x1, y1, x2, y2):
+#     intersections = []
+
+#     for i in range(len(x1) - 1):
+#         # Check if there is a sign change between y1[i] - y2[i] and y1[i+1] - y2[i+1]
+#         if (y1[i] - y2[i]) * (y1[i + 1] - y2[i + 1]) < 0:
+#             # Linear interpolation to find x where y1 = y2
+#             x_intersect = x1[i] + (x1[i + 1] - x1[i]) * abs(y1[i] - y2[i]) / (abs(y1[i] - y2[i]) + abs(y1[i+1] - y2[i+1]))
+#             y_intersect = y1[i] + (y1[i + 1] - y1[i]) * (x_intersect - x1[i]) / (x1[i+1] - x1[i])
+            
+#             intersections.append((x_intersect, y_intersect))
+
+#     return intersections
+
+
+
+def get_yield_stress(x,y,youngs_modulus):
+    elasticStress=((youngs_modulus/100)*(x-2))  ## CHECK WHAT PROPER OFFSET SHOULD BE
+    elasticStress = [i for i in elasticStress if i <= max(y)]  
+    diff = np.abs(y[:len(elasticStress)] - elasticStress)
+    idx = np.argmin(diff)  # Index of the closest match
+
+
+
+    return idx
+
+
+def yield_stress_plot(path,sheet_name):
+    #plot the direction dependency of properties.
+    plt.clf()
     data_frame = pd.read_excel(path,sheet_name=sheet_name,header=([0,1,2]),index_col=0)
+    tests_list = data_frame.columns.get_level_values(0).unique().tolist()     
+     #assign direction to test number
+    tests_series = {s : s.split('_', 2)[1] for s in tests_list}
+    directions_ordered = ['RD', '15', '30', 'DD', '60', '75', 'TD']
+ 
+    #creat a list containing all directions
+    directions = list(set(tests_series.values()))
+    geo_name = tests_list[0].split("_",1)[0]
+
+    final_directions = []
+
+
+    avg_yield_stress_list=[]
+    avg_r_value_list=[]
+
+    max_yield_stress_list=[]
+    max_r_value_list=[]
+
+    min_r_value_list=[]
+    min_yield_stress_list=[]
+
+    for dire in directions_ordered:
+
+
+
+        yield_stress=[]
+        r_value=[]
+
+
+        for i in range (1,4):
+            test_name=f'{geo_name}_{dire}_{i}'
+            try:
+                x = data_frame[test_name]["Calculation"]["Eng. Strain"]
+                y = data_frame[test_name]["Calculation"]["Eng. Stress"]
+                all_r_values = data_frame[test_name]["Calculation"]["r-value"]
+
+
+                young_modulus = data_frame[test_name]["Calculation"]["Young's modulus"].head()[0]
+                id=get_yield_stress(x,y,young_modulus)
+                
+                
+                yield_stress.append(y[id])
+                r_value.append(all_r_values[id])
+
+            except KeyError:
+                print(f"Test {test_name} not found in data")
+                continue
+        if yield_stress:
+
+            max_yield_stress_list.append(max(yield_stress))
+            max_r_value_list.append(max(r_value))
+            
+
+            min_yield_stress_list.append(min(yield_stress))
+            min_r_value_list.append(min(r_value))
+            
+            avg_yield_stress=sum(yield_stress) / len(yield_stress)
+            avg_r_value=sum(r_value) / len(r_value)
+
+            avg_yield_stress_list.append(avg_yield_stress)
+            avg_r_value_list.append(avg_r_value)
+            final_directions.append(dire)
+
+
+
+
+    fig, ax1 = plt.subplots(figsize=(6.4,4.8))
+
+    ax1.set_xlabel('Direction, °')
+    ax1.set_ylabel('E, MPa', color='tab:red')
+   # ax1.plot(final_directions, avg_yield_stress_list, color='tab:red', marker='o', label='Yield Stress (MPa)')
+
+
+    yield_err_upper = [yp_i - y_i for yp_i, y_i in zip(max_yield_stress_list, avg_yield_stress_list)]
+    yield_err_lower = [y_i - ym_i for y_i, ym_i in zip(avg_yield_stress_list, min_yield_stress_list)]
+
+
+    r_err_upper = [yp_i - y_i for yp_i, y_i in zip(max_r_value_list, avg_r_value_list)]
+    r_err_lower = [y_i - ym_i for y_i, ym_i in zip(avg_r_value_list, min_r_value_list)]
+
+
+
+    ax1.errorbar(final_directions, avg_yield_stress_list,
+                yerr=[yield_err_lower, yield_err_upper], 
+                color='tab:red', 
+                marker='o', 
+                label='Yield Stress (MPa)'
+                ,capsize=5, capthick=1, elinewidth=1, errorevery=1)
+    
+    
+    ax2 = ax1.twinx()
+    ax2.set_ylabel('R value, ', color='tab:blue')
+
+
+    ax2.errorbar(final_directions, avg_r_value_list,
+                yerr=[r_err_lower, r_err_upper], 
+                color='tab:blue', 
+                marker='o', 
+                label='Rvalue at yield stress (MPa)'
+                ,capsize=5, capthick=1, elinewidth=1, errorevery=1)
+    
+    
+    ax2.tick_params(axis='y', labelcolor='tab:blue')
+   
+    ax1.tick_params(axis='y', labelcolor='tab:red')
+
+
+    dead = ['0', '15', '30', '45', '60', '75', '90']
+   # plt.xticks(final_directions,dead)
+
+    
+    print(min_yield_stress_list)
+
+    print(avg_yield_stress_list)
+
+    print(max_yield_stress_list)
+
+    plt.rcParams['font.size'] = 14
+    fig.tight_layout()
+    buffer = BytesIO()
+    plt.show()
+    plt.savefig(buffer, format='PNG', bbox_inches='tight')
+    buffer.seek(0)  # Reset buffer's position to the start
+    return buffer.getvalue()    
+ ################
+
+
+
+def yield_r_plot(path,sheet_name):
+    #plot the direction dependency of properties.
+    plt.clf()
+    data_frame = pd.read_excel(path,sheet_name=sheet_name,header=([0,1,2]),index_col=0)
+    tests_list = data_frame.columns.get_level_values(0).unique().tolist()     
+     #assign direction to test number
+    tests_series = {s : s.split('_', 2)[1] for s in tests_list}
+    directions_ordered = ['RD', '15', '30', 'DD', '60', '75', 'TD']
+ 
+    #creat a list containing all directions
+    directions = list(set(tests_series.values()))
+    geo_name = tests_list[0].split("_",1)[0]
+
+    final_directions = []
+
+
+    avg_yield_stress_list=[]
+    avg_r_value_list=[]
+
+    max_yield_stress_list=[]
+    max_r_value_list=[]
+
+    min_r_value_list=[]
+    min_yield_stress_list=[]
+
+    for dire in directions_ordered:
+
+
+
+        yield_stress=[]
+        r_value=[]
+
+
+        for i in range (1,4):
+            test_name=f'{geo_name}_{dire}_{i}'
+            try:
+                x = data_frame[test_name]["Calculation"]["Eng. Strain"]
+                y = data_frame[test_name]["Calculation"]["Eng. Stress"]
+                all_r_values = data_frame[test_name]["Calculation"]["r-value"]
+
+
+                young_modulus = data_frame[test_name]["Calculation"]["Young's modulus"].head()[0]
+                id=get_yield_stress(x,y,young_modulus)
+                
+                
+                yield_stress.append(y[id])
+                r_value.append(all_r_values[id])
+
+            except KeyError:
+                print(f"Test {test_name} not found in data")
+                continue
+        if yield_stress:
+
+            max_yield_stress_list.append(max(yield_stress))
+            max_r_value_list.append(max(r_value))
+            
+
+            min_yield_stress_list.append(min(yield_stress))
+            min_r_value_list.append(min(r_value))
+            
+            avg_yield_stress=sum(yield_stress) / len(yield_stress)
+            avg_r_value=sum(r_value) / len(r_value)
+
+            avg_yield_stress_list.append(avg_yield_stress)
+            avg_r_value_list.append(avg_r_value)
+            final_directions.append(dire)
+
+
+
+
+    fig, ax1 = plt.subplots(figsize=(6.4,4.8))
+
+    ax1.set_xlabel('Direction, °')
+    ax1.set_ylabel('E, MPa', color='tab:red')
+   # ax1.plot(final_directions, avg_yield_stress_list, color='tab:red', marker='o', label='Yield Stress (MPa)')
+
+
+    yield_err_upper = [yp_i - y_i for yp_i, y_i in zip(max_yield_stress_list, avg_yield_stress_list)]
+    yield_err_lower = [y_i - ym_i for y_i, ym_i in zip(avg_yield_stress_list, min_yield_stress_list)]
+
+
+    r_err_upper = [yp_i - y_i for yp_i, y_i in zip(max_r_value_list, avg_r_value_list)]
+    r_err_lower = [y_i - ym_i for y_i, ym_i in zip(avg_r_value_list, min_r_value_list)]
+
+
+
+ 
+
+    plt.errorbar(final_directions, avg_r_value_list,
+                yerr=[r_err_lower, r_err_upper], 
+                color='tab:blue', 
+                marker='o', 
+                label='Rvalue at yield stress (MPa)'
+                ,capsize=5, capthick=1, elinewidth=1, errorevery=1)
+    
+    
+    plt.tick_params(axis='y', labelcolor='tab:blue')
+   
+
+    dead = ['0', '15', '30', '45', '60', '75', '90']
+   # plt.xticks(final_directions,dead)
+
+    
+    fig.tight_layout()
+    buffer = BytesIO()
+     
+    plt.savefig(buffer, format='PNG', bbox_inches='tight')
+    buffer.seek(0)  # Reset buffer's position to the start
+    return buffer.getvalue()    
+ ################
+
+
+
+
+
+
+
+
+def main():
+
+    yield_stress_plot("Excel_processed\QP1200_SDB.xlsx","Sheet1")
+    return 
+
+    data_frame = pd.read_excel("Excel_processed\QP1200_SDB.xlsx",sheet_name="Sheet1",header=([0,1,2]),index_col=0)
     tests_list = data_frame.columns.get_level_values(0).unique().tolist()
     tests_series = {s : s.split('_', 2)[1] for s in tests_list}
     directions = list(set(tests_series.values()))
     geo_name = tests_list[0].split("_",1)[0]
     buffers = []
-    for dire in directions:
-        plt.clf()
-        for i in range(6):
-            test_name = f'{geo_name}_{dire}_{i+1}'
-            try:
-                x = data_frame[test_name]["Calculation"][x_name]
-                y = data_frame[test_name]["Calculation"][y_name]
-                youngs_modulus = data_frame[test_name]["Calculation"]["Young's modulus"][0]
-                print(youngs_modulus)
-                start_index = x[x > 0.0001].index[0]  
-                x = x.loc[start_index:]          
-                y = y.loc[start_index:] 
-                print("EE",find_yield_stress(y,x,youngs_modulus))
-                plt.plot(x,y,label=f'{i+1}')
-                plt.xlabel(xlabel)
-                plt.ylabel(ylabel)
-            except KeyError:
-                continue
-        if func_name == "r-value":
-            
-            plt.ylim([0,2])
-        plt.legend()
-        plt.title(dire)
-        plt.rcParams['font.family'] = 'Arial'
-        plt.rcParams['font.size'] = 16
-    return buffers
 
+    test_name = "SDB_RD_2"
+    x = data_frame[test_name]["Calculation"]["Eng. Strain"]
+    y = data_frame[test_name]["Calculation"]["Eng. Stress"]
+    young_modulus = data_frame[test_name]["Calculation"]["Young's modulus"].head()[0]
+
+
+    plt.plot(x,y)
+    id=get_yield_stress(x,y,young_modulus)
+
+    plt.plot([0,x[id]], [0,y[id]], color="red", zorder=3, label="Intersection")
  
+    plt.show()
 
-def find_yield_stress(stress, strain, youngs_modulus, offset=0.002):
-    stress = np.array(stress)
-    strain = np.array(strain)
-    
-    # Calculate the offset line: σ_offset = E * (strain + offset)
-    offset_line = youngs_modulus/100 * (strain + offset)
-    
-    # Find the first point where stress exceeds offset line
-    for i in range(1, len(stress)):
-        #print(stress[i],"FUCK",offset_line[i])
-        if stress[i] >= offset_line[i]:
-            # Interpolate to get a more precise yield stress
-            yield_stress = np.interp(
-                offset_line[i],  # Target value
-                stress[i-1:i+1],  # Stress values around the intersection
-                stress[i-1:i+1]  # Strain values around the intersection
-            )
-            return yield_stress
-
-    return None  # If no intersection is found
-
-# Example Usage
- 
-
-def main():
-    Normalized_plot("Excel_raw/QP1400.xlsx","Force")
 if __name__ == '__main__':
   main()
 
