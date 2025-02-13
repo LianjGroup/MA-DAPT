@@ -18,15 +18,23 @@ from tkinter import  messagebox,ttk,filedialog
 import pandas as pd
 import os
 import yaml
-from PIL import Image, ImageTk, ImageGrab
+from PIL import Image, ImageTk
 import Improved as im
+
+#Make windows only
 import ctypes     
-import win32clipboard
+
+import sys
+if sys.platform == "win32":
+    import win32clipboard
+elif sys.platform == "darwin":
+    import subprocess
+
+
  
 
 
-#import Mypackage.Mymodule as mm Previous code
-
+ 
 
 
 class App(tk.Tk):    # Basic App blueprint. Tabs with features are added to it
@@ -51,24 +59,26 @@ class App(tk.Tk):    # Basic App blueprint. Tabs with features are added to it
       self.buffer=BufferStorage()
       
  
-      self.show_photo_button = ttk.Button(self, text="⚙️", command=lambda:Settings(self))
-      self.show_photo_button.pack(pady=20,side="right")
+ 
+ 
+      # All tabs. Get sent proper materials
       
-      self.organize_tab = OrganizeEverythingTab(self,self.notebook,material_result[2],self.buffer)    
+      self.plas_tab = PlasTab(self,self.notebook,material_result[2],self.buffer) 
+      self.calc_tab = CalcTab(self,self.notebook,material_result[1]) 
       
-      #self.plas_tab = PlasTab(self,self.notebook,material_result[2],self.buffer) 
-      #self.calc_tab = CalcTab(self,self.notebook,material_result[1]) 
-      #self.frac_tab = FracTab(self,self.notebook,material_result[1],self.buffer)
-      #self.ani_tab =  AnisTab(self,self.notebook,material_result[2],self.buffer) 
-      #self.comp_tab = CompTab(self,self.notebook,material_result[2],self.buffer) 
+    
+      self.frac_tab = FracTab(self,self.notebook,material_result[1],self.buffer)
+      self.ani_tab =  AnisTab(self,self.notebook,material_result[2],self.buffer) 
+      self.comp_tab = CompTab(self,self.notebook,material_result[2],self.buffer) 
      
 
 
       self.mainloop()
 
 
-# Misc functions
 
+# Stores photos while shown in the gallery
+# Later store data
 class BufferStorage:
     def __init__(self):
         self.photo_buffer = []  # To store photos
@@ -80,8 +90,7 @@ class BufferStorage:
     def add_data(self, data):
         self.data_buffer.append(data)
 
-    def get_photos(self):
-      #print(len(self.photo_buffer))
+    def get_photos(self): 
       return self.photo_buffer
 
     def get_data(self):
@@ -93,15 +102,17 @@ class BufferStorage:
         self.data_buffer.clear()
 
 
+
+# Misc functions
 def address():
   return ("Excel_raw","Excel_processed")
 
 def obtain_materials():
     Excel_raw,Excel_processed=address()
     
-    materials_raw = [os.path.splitext(f)[0] for f in os.listdir(Excel_raw) if f.endswith(('.xlsx', '.xls'))]
-    materials_processed = [os.path.splitext(f)[0] for f in os.listdir(Excel_processed) if f.endswith(('.xlsx', '.xls'))]
-    if not materials_raw:
+    materials_raw = [os.path.splitext(f)[0] for f in os.listdir(Excel_raw) if f.endswith((".xlsx", ".xls"))]
+    materials_processed = [os.path.splitext(f)[0] for f in os.listdir(Excel_processed) if f.endswith((".xlsx", ".xls"))]
+    if not materials_raw or not materials_processed:
         return False,materials_raw,materials_processed
     else:
         return True,materials_raw,materials_processed
@@ -116,22 +127,34 @@ def validate_input(new_value): #Ensures only numbers can be entered
 def send_to_clipboard(name):
     image = Image.open(name)
     output = io.BytesIO()
-    image.convert('RGB').save(output, 'BMP')
+    image.convert("RGB").save(output, "BMP")
     data = output.getvalue()[14:]
     output.close()
 
-    win32clipboard.OpenClipboard()
-    win32clipboard.EmptyClipboard()
-    win32clipboard.SetClipboardData(win32clipboard.CF_DIB, data)
-    win32clipboard.CloseClipboard()
+    if sys.platform == "win32":
+        win32clipboard.OpenClipboard()
+        win32clipboard.EmptyClipboard()
+        win32clipboard.SetClipboardData(win32clipboard.CF_DIB, data)
+        win32clipboard.CloseClipboard()
+    
+    elif sys.platform == "darwin":  #Test ON MAC
+        output = io.BytesIO()
+        image.save(output, format="PNG")
+        output.seek(0)
+        process = subprocess.Popen(
+            ["pbcopy"], stdin=subprocess.PIPE
+        )
+        process.communicate(output.getvalue())
+
 
 class ImageGrid(tk.Toplevel):
     def __init__(self, parent, image_buffers):
         super().__init__(parent)
         self.title("Graphs")
-        self.geometry("1500x1600")
+        self.geometry("1480x1600")
 
         self.canvas = tk.Canvas(self)
+        
         self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
@@ -145,7 +168,7 @@ class ImageGrid(tk.Toplevel):
         self.config(menu=self.menubar)
         self.file_menu = tk.Menu(self.menubar,tearoff=False)
         self.file_menu.add_command(
-            label='Save all',
+            label="Save all",
             command=self.saveall,
         )
         self.menubar.add_cascade(
@@ -180,6 +203,8 @@ class ImageGrid(tk.Toplevel):
         else:
           img = Image.open(io.BytesIO(tem_image[0]))
           img = img.resize((220*4, 220*3))  
+          self.geometry("910x750")
+
           images.append(ImageTk.PhotoImage(img)) 
         return images
 
@@ -193,14 +218,14 @@ class ImageGrid(tk.Toplevel):
             label = tk.Label(container, image=img)
             label.pack()
             button_container = ttk.Frame(container)
-            button_container.pack(pady=5)
+            button_container.pack(pady=5,anchor="e")
             label.image = img
             save_button = ttk.Button(button_container, text="Save As ", command=lambda img=img: self.save_image(img))
             save_button.pack(padx=5,side="left")
             save_as_button = ttk.Button(button_container, text="Save Image", command=lambda img=img: self.save_image(img,True))
-            save_as_button.pack(side="left")
+            save_as_button.pack(padx=5,side="left")
             copy_button = ttk.Button(button_container, text="Copy (Windows)",command=lambda img=img:self.save_image(img,True,True))
-            copy_button.pack(side="left")
+            copy_button.pack(padx=5,side="left")
         else:
           for i, img in enumerate(self.images):
               container = ttk.Frame(self.image_frame)
@@ -209,7 +234,7 @@ class ImageGrid(tk.Toplevel):
             
               label.pack()
               button_container = ttk.Frame(container)
-              button_container.pack(pady=5)
+              button_container.pack(pady=5,anchor="center")
 
               label.image = img  # Keep a reference to avoid garbage collection
               save_button = ttk.Button(button_container, text="Save As ", command=lambda img=img: self.save_image(img))
@@ -217,7 +242,7 @@ class ImageGrid(tk.Toplevel):
               save_as_button = ttk.Button(button_container, text="Save Image", command=lambda img=img: self.save_image(img,True))
               save_as_button.pack(side="left",padx=5)
               copy_button = ttk.Button(button_container, text="Copy",command=lambda img=img: self.save_image(img,True,True))
-              copy_button.pack(side="left")
+              copy_button.pack(padx=5,side="left")
             # button1.grid(row=1, column=0)
               #button2.grid(row=1, column=1)
               #button3.grid(row=1, column=2)
@@ -255,7 +280,7 @@ class Settings(tk.Toplevel):
   def __init__(self, parent):
       super().__init__(parent)
       self.title("Settings")
-      self.geometry("800x600")
+      self.geometry("500x600")
 
       # Variables
       self.font_family_var = tk.StringVar()
@@ -265,14 +290,14 @@ class Settings(tk.Toplevel):
       self.legend_on_var = tk.BooleanVar()
       self.legend_fontsize_var = tk.StringVar()
 
-      self.raw_files_var = tk.StringVar()
-      self.processed_files_var = tk.StringVar()
 
-      self.save_location_var = tk.StringVar()
       self.axes_titlesize_var = tk.StringVar()
 
+
+      self.normalize_var = tk.BooleanVar()
+
       # Load settings from YAML
-      with open(f'Script{os.sep}config.yaml', "r") as file:
+      with open(f"Script{os.sep}config.yaml", "r") as file:
           self.settings = yaml.safe_load(file)
 
       # Set initial values
@@ -282,13 +307,12 @@ class Settings(tk.Toplevel):
       self.axes_titlesize_var.set(str(self.settings["matplotlib"]["axes"]["titlesize"]))
       self.legend_on_var.set(self.settings["matplotlib"]["legend"]["on"])
       self.legend_fontsize_var.set(str(self.settings["matplotlib"]["legend"]["fontsize"]))
-      self.raw_files_var.set(self.settings["file_paths"]["raw_files_location"])
-      self.processed_files_var.set(self.settings["file_paths"]["processed_files_location"])
-      self.save_location_var.set(self.settings["file_paths"]["save_location"])
-
+      self.normalize_var.set(self.settings["misc"]["normalized"])
+      
+      
       # GUI Layout
       ttk.Label(self, text="Font Family:").grid(row=1, column=0, sticky="w", padx=10)
-      font_families = ["Arial", "Times New Roman", "Courier New", "Verdana", "Helvetica"]
+      font_families = ["Arial", "Times New Roman", "Cursive","Comic Sans"]
       ttk.Combobox(self, textvariable=self.font_family_var, values=font_families, state="readonly").grid(row=1, column=1, padx=10)
 
       ttk.Label(self, text="Font Size:").grid(row=2, column=0, sticky="w", padx=10)
@@ -301,25 +325,26 @@ class Settings(tk.Toplevel):
       ttk.Label(self, text="Axes Title Size:").grid(row=4, column=0, sticky="w", padx=10)
       ttk.Entry(self, textvariable=self.axes_titlesize_var, validate="key", validatecommand=(self.validate_numeric, "%P")).grid(row=4, column=1, padx=10)
 
-      ttk.Label(self, text="Legend On:").grid(row=5, column=0, sticky="w", padx=10)
-      ttk.Checkbutton(self, variable=self.legend_on_var).grid(row=5, column=1, padx=10, sticky="w")
+      ttk.Label(self, text="Legend On:").grid(row=6, column=0, sticky="w", padx=10)
+      ttk.Checkbutton(self, variable=self.legend_on_var).grid(row=6, column=1, padx=10, sticky="w")
 
-      ttk.Label(self, text="Legend Font Size:").grid(row=6, column=0, sticky="w", padx=10)
-      ttk.Entry(self, textvariable=self.legend_fontsize_var, validate="key", validatecommand=(self.validate_numeric, "%P")).grid(row=6, column=1, padx=10)
+      ttk.Label(self, text="Legend Font Size:").grid(row=5, column=0, sticky="w", padx=10)
+      ttk.Entry(self, textvariable=self.legend_fontsize_var, validate="key", validatecommand=(self.validate_numeric, "%P")).grid(row=5, column=1, padx=10)
 
-      ttk.Label(self, text="File Paths", font=("Arial", 14, "bold")).grid(row=7, column=0, columnspan=2, pady=10)
 
-      ttk.Label(self, text="Raw Files Location:").grid(row=8, column=0, sticky="w", padx=10)
-      ttk.Entry(self, textvariable=self.raw_files_var).grid(row=8, column=1, padx=10)
+      ttk.Label(self, text="Normalization:").grid(row=7, column=0, sticky="w", padx=10)
+      ttk.Checkbutton(self, variable=self.normalize_var).grid(row=7, column=1, padx=10, sticky="w")
 
-      ttk.Label(self, text="Processed Files Location:").grid(row=9, column=0, sticky="w", padx=10)
-      ttk.Entry(self, textvariable=self.processed_files_var).grid(row=9, column=1, padx=10)
 
-      ttk.Label(self, text="Save Location:").grid(row=10, column=0, sticky="w", padx=10)
-      ttk.Entry(self, textvariable=self.save_location_var).grid(row=10, column=1, padx=10)
-
+      
+    
+      ttk.Label(self, text="About", font=("Arial", 12)).grid(row=8, column=0, columnspan=2, pady=10)
+      
+      ttk.Label(self, text="MA-DAPT is created by Guijia Li and Saad Zia\nVersion: 0.4", font=("Arial", 10)).grid(row=9, column=0, columnspan=3, pady=10,rowspan=2)
+      ttk.Label(self, text="License: MIT License\nThis software is open-source and provided 'as-is',\nwithout warranty of any kind, express or implied.", font=("Arial", 10)).grid(row=11, column=0, columnspan=3, pady=10,rowspan=3)
+    
       # Save Button
-      ttk.Button(self, text="Save Settings", command=self.save_settings).grid(row=11, column=1, pady=20)
+      ttk.Button(self, text="Save", command=self.save_settings).grid(row=14, column=0, pady=20)
 
  
 
@@ -331,9 +356,7 @@ class Settings(tk.Toplevel):
       self.settings["matplotlib"]["axes"]["titlesize"] = int(self.axes_titlesize_var.get())
       self.settings["matplotlib"]["legend"]["on"] = self.legend_on_var.get()
       self.settings["matplotlib"]["legend"]["fontsize"] = int(self.legend_fontsize_var.get())
-      self.settings["file_paths"]["raw_files_location"] = self.raw_files_var.get()
-      self.settings["file_paths"]["processed_files_location"] = self.processed_files_var.get()
-      self.settings["file_paths"]["save_location"] = self.save_location_var.get()
+      self.settings["misc"]["normalized"]= self.normalize_var.get()
 
       self.save_yaml(self.settings)
       print("Settings saved successfully!")
@@ -341,7 +364,7 @@ class Settings(tk.Toplevel):
 
   def save_yaml(self, data):
       """Save data to the YAML file."""
-      with open(f'Script{os.sep}config.yaml', "w") as file:
+      with open(f"Script{os.sep}config.yaml", "w") as file:
           yaml.safe_dump(data, file)
 
 
@@ -370,6 +393,7 @@ class CalcTab(ttk.Frame):
  
     canvas=tk.Canvas(self,scrollregion=(0,0,0,len(materials)*52),width=10,highlightthickness=0)
     canvas.pack(side="left",expand=True,fill="both")
+    # For scrolling
     
     
     left_frame=ttk.Frame(canvas)
@@ -391,6 +415,9 @@ class CalcTab(ttk.Frame):
                               command=validate)
       radio.pack(anchor="w",pady=3)
 
+      
+    settings_button = ttk.Button(left_frame, text="Settings", command=lambda:Settings(self))
+    settings_button.pack(pady=30)
 
 
 
@@ -425,10 +452,10 @@ class CalcTab(ttk.Frame):
     bottom_right_frame.pack(pady=20,padx=20)
 
     calculate_button = ttk.Button(bottom_right_frame, text="Calculate",state=tk.DISABLED,command= lambda :calculate(False,int(entry.get())))
-    calculate_button.pack( side="left")
+    calculate_button.pack(side="left")
 
     modified_button = ttk.Button(bottom_right_frame, text="Modified",state=tk.DISABLED,command= lambda :calculate(True,int(entry.get())))
-    modified_button.pack(padx=25 ,side="right")
+    modified_button.pack(padx=10 ,side="left")
 
 
 
@@ -441,8 +468,8 @@ class CalcTab(ttk.Frame):
           Excel_raw =address()[0]
 
           path = f"{Excel_raw}{os.sep}{self.selected_calc_mat.get()}.xlsx"
-          search_string = 'SDB'
-          excel_file = pd.ExcelFile(path, engine='openpyxl')
+          search_string = "SDB"
+          excel_file = pd.ExcelFile(path, engine="openpyxl")
           matching_sheets = [sheet for sheet in excel_file.sheet_names if search_string in sheet]
 
           if modification:
@@ -471,8 +498,32 @@ class PlasTab(ttk.Frame):
                      width=10,
                      highlightthickness=0)
     canvas.pack(side="left",expand=True,fill="both")
-    
-    
+      
+
+
+    def validate():
+        if self.selected_mat.get():
+            if  any(var.get() for var in self.property_vars.values()):
+              repeat_button.config(state=tk.NORMAL)
+              custom_plot_button.config(state=tk.NORMAL)
+              summary_button.config(state=tk.NORMAL)
+            else:
+              repeat_button.config(state=tk.DISABLED)
+              custom_plot_button.config(state=tk.DISABLED)
+              summary_button.config(state=tk.DISABLED)
+            uts_button.config(state=tk.NORMAL)
+            yts_button.config(state=tk.NORMAL)
+            R_button.config(state=tk.NORMAL)
+            
+        else:
+            repeat_button.config(state=tk.DISABLED)
+            custom_plot_button.config(state=tk.DISABLED)
+            uts_button.config(state=tk.DISABLED)
+            yts_button.config(state=tk.DISABLED)
+            R_button.config(state=tk.DISABLED)
+            summary_button.config(state=tk.DISABLED)
+
+
     left_frame=ttk.Frame(canvas)
     canvas.create_window((20,20), window=left_frame, anchor="nw")
  
@@ -484,10 +535,12 @@ class PlasTab(ttk.Frame):
       radio = ttk.Radiobutton(left_frame, 
                               text=material,
                                value=material,
-                                 variable=self.selected_mat)
+                                 variable=self.selected_mat
+                                 ,command=validate)
       radio.pack(anchor="sw",pady=3)
 
-
+    settings_button = ttk.Button(left_frame, text="Settings", command=lambda:Settings(self))
+    settings_button.pack(pady=30)
     ''''Middle Frame'''
     
 
@@ -505,7 +558,7 @@ class PlasTab(ttk.Frame):
     self.property_vars = {}
     for prop in (properties):
       var = tk.BooleanVar(value=False)   
-      chk = ttk.Checkbutton(properties_frame, text=prop, variable=var)
+      chk = ttk.Checkbutton(properties_frame, text=prop, variable=var,command=validate)
       self.property_vars[prop] = var
       chk.pack(anchor="sw", pady=2) 
 
@@ -528,11 +581,7 @@ class PlasTab(ttk.Frame):
 
       ImageGrid(self,buffer) # type: ignore
         
-
- 
-   
-    repeat_button=ttk.Button(properties_frame,text="Repeat",command=lambda :repeatablity_caller())
-    repeat_button.pack(pady=3)  
+  
    
  
     def size_effect():
@@ -554,10 +603,9 @@ class PlasTab(ttk.Frame):
       for idx, prop in enumerate(tests_list):
         var = tk.BooleanVar(value=False)
         chk = ttk.Checkbutton(check_frame, text=prop, variable=var)
-        chk.grid(row=idx+1, column=1, sticky='w')
+        chk.grid(row=idx+1, column=1, sticky="w")
         selected_tests[prop] = var
       def on_confirm():
-        print("Donkey")
         selected_options = [opt for opt, var in selected_tests.items() if var.get()]
         print((path, selected_options,selected_indices[0]))
         for opts in selected:
@@ -566,21 +614,73 @@ class PlasTab(ttk.Frame):
       confirm_button = ttk.Button(new_window, text="Confirm", command=on_confirm)
       confirm_button.pack(pady=10)
     
-    
-    custom_plot_button=ttk.Button(properties_frame,text="Custom Plot",command=size_effect)
-    custom_plot_button.pack(pady=3)  
+ 
+   
+    def summary(letters=False):
+      path = f"{Excel_processed}{os.sep}{self.selected_mat.get()}.xlsx"
+      selected = [prop for prop, var in self.property_vars.items() if var.get()]
+      for p in selected:
+        buffer.add_photo(im.summary(path,"Sheet1",p,letters) )
+         
+
+      ImageGrid(self,buffer)
 
 
-
-    def r_elong():
+    def uts():
         path = f"{Excel_processed}{os.sep}{self.selected_mat.get()}.xlsx"
-        buffer.add_photo(im.r_plot(path,"Sheet1"))
-
+        buffer.add_photo(im.uts_plot(path,"Sheet1"))
         ImageGrid(self,buffer) 
    
    
-    ytsU_button=ttk.Button(properties_frame, text="R-Value", command=r_elong)
-    ytsU_button.pack(pady=3)
+    def yts():
+        path = f"{Excel_processed}{os.sep}{self.selected_mat.get()}.xlsx"
+        buffer.add_photo(im.yield_stress_plot(path,"Sheet1"))
+        ImageGrid(self,buffer) 
+   
+   
+
+ 
+
+    def yieldr():
+        path = f"{Excel_processed}{os.sep}{self.selected_mat.get()}.xlsx"
+        buffer.add_photo(im.yield_stress_plot(path,"Sheet1",True))
+        ImageGrid(self,buffer) 
+   
+   
+
+    
+
+
+    button_frame = ttk.Frame(properties_frame)
+    button_frame.pack(pady=5)
+
+    repeat_button = ttk.Button(button_frame, text="Repeat", state=tk.DISABLED, command=repeatablity_caller)
+    repeat_button.grid(row=0, column=0, padx=5, pady=5)
+
+
+
+    custom_plot_button = ttk.Button(button_frame, text="Custom Plot", command=size_effect, state=tk.DISABLED)
+    custom_plot_button.grid(row=0, column=1, padx=5, pady=5)
+
+
+
+    short_var = tk.BooleanVar(value=False)   
+    short_check=ttk.Checkbutton(button_frame,text="DD,RD,TD",variable=short_var)
+    summary_button=ttk.Button(button_frame,text="Summary",state=tk.DISABLED,command=lambda :summary(short_var.get()))
+
+    short_check.grid(row=1,column=0, padx=5, pady=5)
+    summary_button.grid(row=1,column=1, padx=5, pady=5)
+
+    uts_button=ttk.Button(button_frame, text="UTS", command=uts)
+    uts_button.grid(row=2,column=0, padx=5, pady=5)
+
+    yts_button=ttk.Button(button_frame, text="YTS", command=yts)
+    yts_button.grid(row=2,column=1, padx=5, pady=5)
+
+    R_button=ttk.Button(button_frame, text="R values", command=yieldr)
+    R_button.grid(row=3,column=0, padx=5, pady=5,columnspan=2)
+
+
 
     scrollbar=ttk.Scrollbar(self,orient="vertical",command=canvas.yview)
     scrollbar.pack(side="right", fill="y")
@@ -671,7 +771,7 @@ class FracTab(ttk.Frame):
           var = tk.BooleanVar(value=False)
           checkbox = ttk.Checkbutton(right_frame, text=header, variable=var)
           self.checkbox_vars[header] = var
-          checkbox.pack(anchor="w", pady=2,padx=50)
+          checkbox.pack(anchor="center", pady=2,padx=50)
 
         def get_selected(): # Collect the ticked boxses    
             selected = [header for header, var in self.checkbox_vars.items() if var.get()]
@@ -702,7 +802,7 @@ class FracTab(ttk.Frame):
               self.bvars[material]=bvar
               #chk.pack(anchor='w')
 
-              chk.pack(anchor='w')
+              chk.pack(anchor="w")
           def get_selected_checks():   
             selected = [header for header, var in self.bvars.items() if var.get()]
             selected.append(self.selected_calc_mat.get())
@@ -715,45 +815,61 @@ class FracTab(ttk.Frame):
         def frac_compare_caller(var,materials):
           print(materials)
   
-
+          bufs=[]
           for header in var:
-            bufs=im.fracture_compare(path,  header,materials)
+            bufs.append(im.fracture_compare(path,  header,materials))
              
-            #buffer.add_photo(im.fracture_compare(path,  header,materials))
-            
-          #ImageGrid(self,buffer) # type: ignore
-          
-          #ImageGrid(self,"Script\images") # type: ignore
 
-            #if get_selected()
+          for b in bufs:
+            buffer.add_photo(b)
+          ImageGrid(self,buffer)
 
+        
+        def force_displacement(path,quality):
+          buffer.add_photo(im.Normalized_plot(path,quality))
+          ImageGrid(self,buffer)
 
+# Give better names
 
-        confirm_button=ttk.Button(right_frame,text="Confirm",command= lambda:frac_calculate(path,get_selected()))           
-        confirm_button.pack(padx=50)
-        compare_button=ttk.Button(right_frame,text="Compare",command= lambda:frac_compare(path,get_selected()))           
-        compare_button.pack(padx=50)
-        summary_button=ttk.Button(right_frame,text="Summary",command= lambda:frac_summary(path,get_selected()))           
-        summary_button.pack(padx=50)
-        summary_button_compare=ttk.Button(right_frame,text="Sum comp",command= lambda:frac_summary_multiple(path,get_selected()))           
-        summary_button_compare.pack(padx=50)
-        confirm_compare_button=ttk.Button(right_frame,text="confirm comp",command= lambda:frac_one_name(path,get_selected()))           
-        confirm_compare_button.pack(padx=50)
+        button_frame = ttk.Frame(right_frame)
+        button_frame.pack(padx=50, pady=5)
 
+        confirm_button = ttk.Button(button_frame, text="Confirm", command=lambda: frac_calculate(path, get_selected()))           
+        compare_button = ttk.Button(button_frame, text="Compare", command=lambda: frac_compare(path, get_selected()))           
+        summary_button = ttk.Button(button_frame, text="Summary", command=lambda: frac_summary(path, get_selected()))           
+        summary_button_compare = ttk.Button(button_frame, text="Sum Comp", command=lambda: frac_summary_multiple(path, get_selected()))           
+        confirm_compare_button = ttk.Button(button_frame, text="Confirm Comp", command=lambda: frac_one_name(path, get_selected()))           
+        force_direction_button = ttk.Button(button_frame, text="Force Dir", command=lambda: force_displacement(path, "Force"))           
+        displacement_direction_button = ttk.Button(button_frame, text="Displacement Dir", command=lambda: force_displacement(path, "Displacement"))           
+
+        confirm_button.grid(row=0, column=0, padx=5, pady=5)
+        compare_button.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
+        summary_button.grid(row=0, column=1, padx=5, pady=5)
+        summary_button_compare.grid(row=1, column=1, padx=5, pady=5)
+        confirm_compare_button.grid(row=1, column=0, padx=5, pady=5)
+        
+        force_direction_button.grid(row=2, column=1, padx=5, pady=5)
+        displacement_direction_button.grid(row=2, column=0, padx=5, pady=5)
 
     for material in (materials):  #Add materials
       radio = ttk.Radiobutton(left_frame, text=material, value=material, variable=self.selected_calc_mat, command=frac_repeat)
       radio.pack(anchor="w")
+    settings_button = ttk.Button(left_frame, text="Settings", command=lambda:Settings(self))
+    settings_button.pack(pady=30)
 
     scrollbar=ttk.Scrollbar(self,orient="vertical",command=canvas.yview)
     scrollbar.pack(side="right", fill="y")
     canvas.configure(yscrollcommand=scrollbar.set)
 
- 
 
 
-   
- 
+
+
+
+
+
+
+
 class CompTab(ttk.Frame):
   def __init__(self,parent, notebook,materials,buffer):
     super().__init__(parent)
@@ -773,7 +889,15 @@ class CompTab(ttk.Frame):
                      highlightthickness=0)
     canvas.pack(side="left",expand=True,fill="both")
     
-    
+    def validate():
+        if any(var.get() for var in self.material_vars.values()) and  any(var.get() for var in self.property_vars.values()):
+          compare_button.config(state=tk.NORMAL)
+        else:
+          compare_button.config(state=tk.DISABLED)
+
+
+
+
     left_frame=ttk.Frame(canvas)
     canvas.create_window((20,20), window=left_frame, anchor="nw")
  
@@ -784,8 +908,8 @@ class CompTab(ttk.Frame):
     self.material_vars = {}
     for idx, material in enumerate(materials):
       var = tk.BooleanVar(value=False)   
-      chk = ttk.Checkbutton(left_frame, text=material, variable=var)
-      chk.grid(row=idx+1, column=0, sticky='w')
+      chk = ttk.Checkbutton(left_frame, text=material, variable=var,command=validate)
+      chk.grid(row=idx+1, column=0, sticky="w")
       self.material_vars[material] = var
 
     def compare_caller():
@@ -793,8 +917,6 @@ class CompTab(ttk.Frame):
       selected = [prop for prop, var in self.property_vars.items() if var.get()]
 
    
-      import matplotlib.pyplot as plt
-      plt.switch_backend('Agg')  # Non-GUI backend for saving or handling plots without display
       
    
       for p in selected:
@@ -826,7 +948,7 @@ class CompTab(ttk.Frame):
     self.property_vars = {}
     for prop in (properties):
       var = tk.BooleanVar(value=False)   
-      chk = ttk.Checkbutton(properties_frame, text=prop, variable=var)
+      chk = ttk.Checkbutton(properties_frame, text=prop, variable=var,command=validate)
       self.property_vars[prop] = var
       chk.pack(anchor="s", pady=2) 
 
@@ -838,7 +960,7 @@ class CompTab(ttk.Frame):
 
 
 
-    compare_button=ttk.Button(properties_frame,text="Compare",command=lambda :compare_caller())
+    compare_button=ttk.Button(properties_frame,text="Compare",command=lambda :compare_caller(),state=tk.DISABLED)
     compare_button.pack(pady=10)  
 
 
@@ -846,9 +968,6 @@ class CompTab(ttk.Frame):
     scrollbar=ttk.Scrollbar(self,orient="vertical",command=canvas.yview)
     scrollbar.pack(side="right", fill="y")
     canvas.configure(yscrollcommand=scrollbar.set)
-
-
-
 
 
 class AnisTab(ttk.Frame):
@@ -871,6 +990,15 @@ class AnisTab(ttk.Frame):
     left_frame=ttk.Frame(canvas)
     canvas.create_window((20,40), window=left_frame, anchor="nw")
  
+    def validate():
+      if self.selected_mat.get() and any(var.get() for var in self.property_vars.values()):
+            anisotropy_button.config(state=tk.NORMAL)
+
+      else:
+          anisotropy_button.config(state=tk.DISABLED)
+
+
+
 
 
     self.selected_mat = tk.StringVar(value="")
@@ -879,10 +1007,11 @@ class AnisTab(ttk.Frame):
       radio = ttk.Radiobutton(left_frame, 
                               text=material,
                                value=material,
-                                 variable=self.selected_mat)
+                                 variable=self.selected_mat
+                                 ,command=validate)
       radio.pack(anchor="sw",pady=3)
-
-
+    settings_button = ttk.Button(left_frame, text="Settings", command=lambda:Settings(self))
+    settings_button.pack(pady=30)
 
 
     ''''Middle Frame'''
@@ -935,7 +1064,7 @@ class AnisTab(ttk.Frame):
     self.property_vars = {}
     for prop in (properties):
       var = tk.BooleanVar(value=False)   
-      chk = ttk.Checkbutton(properties_frame, text=prop, variable=var)
+      chk = ttk.Checkbutton(properties_frame, text=prop, variable=var,command=validate)
       self.property_vars[prop] = var
       chk.pack(anchor="sw", pady=2) 
 
@@ -962,7 +1091,7 @@ class AnisTab(ttk.Frame):
       ImageGrid(self,buffer) # type: ignore
 
 
-    anisotropy_button=ttk.Button(properties_frame,text="Anisotropy",command=lambda:orientation())
+    anisotropy_button=ttk.Button(properties_frame,text="Anisotropy",command=lambda:orientation(),state=tk.DISABLED)
     anisotropy_button.pack(pady=3)  
 
     scrollbar=ttk.Scrollbar(self,orient="vertical",command=canvas.yview)
@@ -973,121 +1102,76 @@ class AnisTab(ttk.Frame):
 
 
 
+# class PlasTab2(ttk.Frame):
+#   def __init__(self,parent, notebook,materials,buffer):
+#     super().__init__(parent)
+#     Excel_processed=address()[1]
 
-class OrganizeEverythingTab(ttk.Frame):
-  def __init__(self,parent, notebook,materials,buffer):
-    super().__init__(parent)
-    Excel_processed=address()[1]
+#     notebook.add(self, text="ORGANIZE")
 
-    notebook.add(self, text="ORGANIZE")
+#     mat_title = ttk.Label(self, text="Materials", font=("Arial", 15))
+#     mat_title.pack(pady=20,anchor="nw",padx=37)
 
-    mat_title = ttk.Label(self, text="Materials", font=("Arial", 15))
-    mat_title.pack(pady=20,anchor="nw",padx=37)
-
-    canvas=tk.Canvas(self, 
-                     scrollregion=(0,0,0,len(materials)*45),
-                     width=10,
-                     highlightthickness=0)
-    canvas.pack(side="left",expand=True,fill="both")
+#     canvas=tk.Canvas(self, 
+#                      scrollregion=(0,0,0,len(materials)*45),
+#                      width=10,
+#                      highlightthickness=0)
+#     canvas.pack(side="left",expand=True,fill="both")
     
     
-    left_frame=ttk.Frame(canvas)
-    canvas.create_window((20,20), window=left_frame, anchor="nw")
+#     left_frame=ttk.Frame(canvas)
+#     canvas.create_window((20,20), window=left_frame, anchor="nw")
  
 
 
-    self.selected_mat = tk.StringVar(value="")
+#     self.selected_mat = tk.StringVar(value="")
 
-    for material in (materials):
-      radio = ttk.Radiobutton(left_frame, 
-                              text=material,
-                               value=material,
-                                 variable=self.selected_mat)
-      radio.pack(anchor="sw",pady=3)
+#     for material in (materials):
+#       radio = ttk.Radiobutton(left_frame, 
+#                               text=material,
+#                                value=material,
+#                                  variable=self.selected_mat)
+#       radio.pack(anchor="sw",pady=3)
 
 
-    ''''Middle Frame'''
+#     ''''Middle Frame'''
     
 
-    properties_frame=ttk.Frame(self)
-    properties_frame.pack(side="left",padx=15,expand=True,fill="both",anchor="n")
+#     properties_frame=ttk.Frame(self)
+#     properties_frame.pack(side="left",padx=15,expand=True,fill="both",anchor="n")
 
 
-    prop_title = ttk.Label(properties_frame, text="Graph", font=("Arial", 15))
-    prop_title.pack(pady=20)
+#     prop_title = ttk.Label(properties_frame, text="Graph", font=("Arial", 15))
+#     prop_title.pack(pady=20)
 
-    prop_separator = ttk.Separator(properties_frame, orient="horizontal")
-    prop_separator.pack(pady=1)  
+#     prop_separator = ttk.Separator(properties_frame, orient="horizontal")
+#     prop_separator.pack(pady=1)  
 
-    properties = ["engineering", "true", "effective plastic strain","r-value"] 
-    self.property_vars = {}
-    for prop in (properties):
-      var = tk.BooleanVar(value=False)   
-      chk = ttk.Checkbutton(properties_frame, text=prop, variable=var)
-      self.property_vars[prop] = var
-      chk.pack(anchor="sw", pady=2) 
+#     properties = ["engineering", "true", "effective plastic strain","r-value"] 
+#     self.property_vars = {}
+#     for prop in (properties):
+#       var = tk.BooleanVar(value=False)   
+#       chk = ttk.Checkbutton(properties_frame, text=prop, variable=var)
+#       self.property_vars[prop] = var
+#       chk.pack(anchor="sw", pady=2) 
 
 
     
     
-    prop_separator = ttk.Separator(properties_frame, orient="horizontal")
-    prop_separator.pack(pady=1)  
+#     prop_separator = ttk.Separator(properties_frame, orient="horizontal")
+#     prop_separator.pack(pady=1)  
 
 
-    def summary(letters=False):
-      path = f"{Excel_processed}{os.sep}{self.selected_mat.get()}.xlsx"
-      selected = [prop for prop, var in self.property_vars.items() if var.get()]
-      for p in selected:
-        buffer.add_photo(im.summary(path,"Sheet1",p,letters) )
-         
-
-      ImageGrid(self,buffer)
-
-    summary_frame=ttk.Frame(properties_frame)
-
-    short_var = tk.BooleanVar(value=False)   
-    short_check=ttk.Checkbutton(summary_frame,text="DD,RD,TD",variable=short_var)
-    summary_button=ttk.Button(summary_frame,text="Summary",command=lambda :summary(short_var.get()))
-    summary_frame.pack(pady=3)
-
-    summary_button.pack(side="right")
-    short_check.pack(side="right",padx=29)
 
 
-    def uts():
-        path = f"{Excel_processed}{os.sep}{self.selected_mat.get()}.xlsx"
-        buffer.add_photo(im.uts_plot(path,"Sheet1"))
-        ImageGrid(self,buffer) 
-   
-   
-    uts_button=ttk.Button(properties_frame, text="UTS", command=uts)
-    uts_button.pack(pady=3,padx=100)
 
-    def yts():
-        path = f"{Excel_processed}{os.sep}{self.selected_mat.get()}.xlsx"
-        buffer.add_photo(im.yield_stress_plot(path,"Sheet1"))
-        ImageGrid(self,buffer) 
-   
-   
-    yts_button=ttk.Button(properties_frame, text="Yield Stress", command=yts)
-    yts_button.pack(pady=3)
- 
 
-    def yieldr():
-        path = f"{Excel_processed}{os.sep}{self.selected_mat.get()}.xlsx"
-        buffer.add_photo(im.yield_stress_plot(path,"Sheet1",True))
-        ImageGrid(self,buffer) 
-   
-   
-    R_button=ttk.Button(properties_frame, text="R values", command=yieldr)
-    R_button.pack(pady=3)
-    
    
  
 
-    scrollbar=ttk.Scrollbar(self,orient="vertical",command=canvas.yview)
-    scrollbar.pack(side="right", fill="y")
-    canvas.configure(yscrollcommand=scrollbar.set)
+#     scrollbar=ttk.Scrollbar(self,orient="vertical",command=canvas.yview)
+#     scrollbar.pack(side="right", fill="y")
+#     canvas.configure(yscrollcommand=scrollbar.set)
 
 
  
@@ -1095,9 +1179,9 @@ class OrganizeEverythingTab(ttk.Frame):
 
  
 def main(): 
-  ctypes.windll.shcore.SetProcessDpiAwareness(1) # Fix scaling so text isn't blurry. Test on mac screens
+  ctypes.windll.shcore.SetProcessDpiAwareness(1) # Fix scaling so text isn't blurry on windows. Test on other devices
   App()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
   main()

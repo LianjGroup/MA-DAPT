@@ -1,15 +1,12 @@
-file_paths:
-  processed_files_location: Excel_processed
-  raw_files_location: Excel_raw
-  save_location: save
 matplotlib:
   axes:
     labelsize: 10
     titlesize: 16
   font:
-    family: Verdana
-    size: 20
+    family: Arial
+    size: 10
   legend:
-    true: true
     fontsize: 16
     'on': false
+misc:
+  normalized: true

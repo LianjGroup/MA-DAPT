@@ -25,22 +25,23 @@ legend_on=True
 normalized=True
 
 def configs():
-    with open(f'Script{os.sep}config.yaml') as file:
+    with open(f"Script{os.sep}config.yaml") as file:
         config = yaml.full_load(file)
 
 
     plt.rcParams.update({
-        'font.family': config['matplotlib']['font']['family'],
-        'font.size': config['matplotlib']['font']['size'],
-        'axes.labelsize': config['matplotlib']['font']['size'],
-        'axes.titlesize': config['matplotlib']['font']['size'],
-        'legend.fontsize': config['matplotlib']['font']['size']
+        "font.family": config["matplotlib"]["font"]["family"],
+        "font.size": config["matplotlib"]["font"]["size"],
+        "axes.labelsize": config["matplotlib"]["font"]["size"],
+        "axes.titlesize": config["matplotlib"]["font"]["size"],
+        "legend.fontsize": config["matplotlib"]["font"]["size"]
     })
-    global legend_on
-    legend_on=config['matplotlib']['legend']
-     
-
+    global legend_on,normalized,excel_raw,excel_processed
+    legend_on=config["matplotlib"]["legend"]["on"]
+    normalized=config["misc"]["normalized"]
 configs()
+
+ 
 
 
 def xy_values(func_name):
@@ -66,7 +67,7 @@ def xy_values(func_name):
         xlabel=x_name+", -"
         ylabel=y_name+", -"
     else: 
-        print('invalid parameter, must be 1-4')
+        print("invalid parameter, must be 1-4")
         return
     return x_name,y_name,xlabel,ylabel
 
@@ -74,13 +75,11 @@ def repeatablity (path,sheet_name,func_name,setting_fn=None):
     print(f"repeatablity({path},{sheet_name},{func_name})")
    
     x_name,y_name,xlabel,ylabel=xy_values(func_name)
-    print("DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")
     print(x_name,y_name,xlabel,ylabel)
-    print("DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")
     data_frame = pd.read_excel(path,sheet_name=sheet_name,header=([0,1,2]),index_col=0)
     tests_list = data_frame.columns.get_level_values(0).unique().tolist()
     #assign direction to test number
-    tests_series = {s : s.split('_', 2)[1] for s in tests_list}
+    tests_series = {s : s.split("_", 2)[1] for s in tests_list}
     #creat a list containing all directions
     directions = list(set(tests_series.values()))
     geo_name = tests_list[0].split("_",1)[0]
@@ -92,7 +91,7 @@ def repeatablity (path,sheet_name,func_name,setting_fn=None):
         totaly=[]
         plt.clf()
         for i in range(6):
-            test_name = f'{geo_name}_{dire}_{i+1}'
+            test_name = f"{geo_name}_{dire}_{i+1}"
             try:
                 x = data_frame[test_name]["Calculation"][x_name]
                 y = data_frame[test_name]["Calculation"][y_name]
@@ -102,10 +101,8 @@ def repeatablity (path,sheet_name,func_name,setting_fn=None):
 
                 totalx.append(x)
                 totaly.append(y)
-                print(f"test{len(x)}")
-                print(f"lest{len(y)}")
 
-                plt.plot(x,y,label=f'{i+1}')
+                plt.plot(x,y,label=f"{i+1}")
                 plt.xlabel(xlabel)
                 plt.ylabel(ylabel)
             except KeyError:
@@ -126,8 +123,8 @@ def repeatablity (path,sheet_name,func_name,setting_fn=None):
             plt.plot(tx,ty,label="Average")
             #plt.ylim([0,2])
 
-
-        plt.legend()
+        if legend_on:
+            plt.legend()
         plt.title("SDB-"+dire)
         if setting_fn:
             setting_fn()
@@ -135,7 +132,7 @@ def repeatablity (path,sheet_name,func_name,setting_fn=None):
 
         #print(f"{dire}.jpg")
         buffer = BytesIO()
-        plt.savefig(buffer, format='PNG', bbox_inches='tight')
+        plt.savefig(buffer, format="PNG", bbox_inches="tight")
         buffer.seek(0)  # Reset buffer's position to the start
         buffers.append(buffer)
     return buffers
@@ -169,8 +166,8 @@ def compare(address,materials,func_name,setting_fn=None):
         plt.plot(x,y,label=f'{material_name}',color=colors[i])
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
-
-    plt.legend()
+    if legend_on:
+        plt.legend()
     if func_name == "r-value":
         plt.ylim([0,2])
     if setting_fn:
@@ -588,16 +585,15 @@ def fracture_repeat(path,sheet_name,setting_fn=None):
         buffers.append(buffer)
     return buffers
     
-#🔧
-def fracture_normal_compare(path,sheet_names,setting_fn=None):
-    print("Sssssssssssssssssssssssssss")
 
+def fracture_normal_compare(path,sheet_names,setting_fn=None):
+ 
 #     dataframes=[]
 #     for sheet_name in sheet_names:
 #         data_frame.append(pd.read_excel(path,sheet_name=sheet_name,header=([0,1,2]),index_col=0)
 # )
 
-    data_frame = pd.read_excel(path,sheet_name="SH",header=([0,1,2]),index_col=0)
+    data_frame = pd.read_excel(path,sheet_name=sheet_names[0],header=([0,1,2]),index_col=0)
     
     old_list = data_frame.columns.get_level_values(0).unique().tolist()
     new_list = list({s.rsplit('_', 1)[0] for s in old_list})
@@ -675,7 +671,7 @@ def fracture_summary(path,sheet_name,setting_fn=None):
     
     return buffer
     
-#🔧
+
 def fracture_compare_summary(path,sheet_names,setting_fn=None):
     plt.clf()
 
@@ -854,7 +850,7 @@ def Normalized_plot(path,quality="Displacement"):
     
     plt.ylabel(f"Normalized fracture {quality}, -")
 
-    plt.show()
+  
     buffer = BytesIO()
     plt.savefig(buffer, format='PNG', bbox_inches='tight')
     buffer.seek(0)  # Reset buffer's position to the start
@@ -881,14 +877,7 @@ def Normalized_plot(path,quality="Displacement"):
 
 
 
-
-
-
-
-
-###########REMAKE
-
-def fracture_compare(address,materials,sheet_name,setting_fn=None):
+def fracture_compare(address,sheet_name,materials,setting_fn=None):
     plt.clf()
     print("hhhhhhhhhhhhhhhh")
     print(materials)
@@ -918,7 +907,12 @@ def fracture_compare(address,materials,sheet_name,setting_fn=None):
     sorted_labels, sorted_handles = zip(*sorted_handles_labels)
     plt.legend(sorted_handles, sorted_labels)
 
-    plt.show()
+    plt.tight_layout()
+    buffer = BytesIO()
+   
+    plt.savefig(buffer, format='PNG', bbox_inches='tight')
+    buffer.seek(0)  # Reset buffer's position to the start
+    return buffer.getvalue()   
     
  
 
@@ -1027,7 +1021,7 @@ def yield_stress_plot(path,sheet_name,show_r=False):
     r_err_upper = [yp_i - y_i for yp_i, y_i in zip(max_r_value_list, avg_r_value_list)]
     r_err_lower = [y_i - ym_i for y_i, ym_i in zip(avg_r_value_list, min_r_value_list)]
 
-    normalized=False
+
     if normalized:
         if show_r:
             avg_r_value_list = (avg_r_value_list - min(avg_r_value_list)) / (max(avg_r_value_list) - min(avg_r_value_list))
@@ -1098,6 +1092,8 @@ def yield_stress_plot(path,sheet_name,show_r=False):
 
 
 def main():
+    print("FOR TESTING")
+    return
     yield_stress_plot("Excel_processed/QP1200_SDB.xlsx",sheet_name="Sheet1",show_r=True)
     return
     data_frame = pd.read_excel("Excel_processed/CP1000_SDB.xlsx",sheet_name="Sheet1",header=([0,1,2]),index_col=0)
