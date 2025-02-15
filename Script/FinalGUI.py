@@ -1,17 +1,3 @@
-# %% [markdown]
-# # TODO
-# 
-# 
-# - Create file to store addresses
-# - Add option to change addresses in gui
-# - Add settings tab if they are any other settings
-# - Remake comparison fracture function
-
-
-# 
-# 
- #use crtl+k crtl+c to comment out and crtl+k crtl+u to uncomment
-
 import io
 import tkinter as tk
 from tkinter import  messagebox,ttk,filedialog     
@@ -20,27 +6,28 @@ import os
 import yaml
 from PIL import Image, ImageTk
 import Improved as im
+import traceback
 
-#Make windows only
-import ctypes     
+     
 
 import sys
 if sys.platform == "win32":
-    import win32clipboard
+  import win32clipboard
+  import ctypes 
 elif sys.platform == "darwin":
     import subprocess
 
 
  
 
-
- 
-
-
 class App(tk.Tk):    # Basic App blueprint. Tabs with features are added to it
   def __init__(self):
-      super().__init__()
+    super().__init__()
 
+    self.report_callback_exception = self.show_error
+
+    try:
+      self.iconbitmap("Script\l.ico")
 
       self.title("Materials Analysis")    
       style = ttk.Style()                            #Use to change the style of the tabs
@@ -48,6 +35,7 @@ class App(tk.Tk):    # Basic App blueprint. Tabs with features are added to it
     
       self.notebook = ttk.Notebook()
       self.geometry("700x600")
+      self.minsize(700, 600)  
       self.notebook.pack(fill="both", expand=True)
 
       material_result=obtain_materials()
@@ -58,22 +46,34 @@ class App(tk.Tk):    # Basic App blueprint. Tabs with features are added to it
 
       self.buffer=BufferStorage()
       
- 
- 
- 
+
+      def cause_error():
+          raise RuntimeError("money!")
+
+      btn = tk.Button(self, text="Cause Error", command=cause_error)
+      btn.pack(pady=20)
+
+
       # All tabs. Get sent proper materials
       
       self.plas_tab = PlasTab(self,self.notebook,material_result[2],self.buffer) 
-      self.calc_tab = CalcTab(self,self.notebook,material_result[1]) 
       
-    
-      self.frac_tab = FracTab(self,self.notebook,material_result[1],self.buffer)
       self.ani_tab =  AnisTab(self,self.notebook,material_result[2],self.buffer) 
+    
       self.comp_tab = CompTab(self,self.notebook,material_result[2],self.buffer) 
-     
+      
+      self.frac_tab = FracTab(self,self.notebook,material_result[1],self.buffer)
+      self.calc_tab = CalcTab(self,self.notebook,material_result[1])
+      self.mainloop() 
+    except Exception as e:
+        self.show_error(type(e), e, e.__traceback__)
+        self.destroy()  
 
+  def show_error(self, exc_type, exc_value, exc_traceback):
+      error_message = "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+      messagebox.showerror("Error", f"An error occurred:\n\n{error_message}")
 
-      self.mainloop()
+    
 
 
 
@@ -81,14 +81,14 @@ class App(tk.Tk):    # Basic App blueprint. Tabs with features are added to it
 # Later store data
 class BufferStorage:
     def __init__(self):
-        self.photo_buffer = []  # To store photos
-        self.data_buffer = []   # To store x,y values
+      self.photo_buffer = []  # To store photos
+      self.data_buffer = []   # To store x,y values
 
     def add_photo(self, photo):
-        self.photo_buffer.append(photo)
+      self.photo_buffer.append(photo)
 
     def add_data(self, data):
-        self.data_buffer.append(data)
+      self.data_buffer.append(data)
 
     def get_photos(self): 
       return self.photo_buffer
@@ -97,9 +97,9 @@ class BufferStorage:
       return self.data_buffer
 
     def clear_photos(self):
-        self.photo_buffer.clear()
+      self.photo_buffer.clear()
     def clear_data(self):
-        self.data_buffer.clear()
+      self.data_buffer.clear()
 
 
 
@@ -148,130 +148,131 @@ def send_to_clipboard(name):
 
 
 class ImageGrid(tk.Toplevel):
-    def __init__(self, parent, image_buffers):
-        super().__init__(parent)
-        self.title("Graphs")
-        self.geometry("1480x1600")
+  existing_instance = None  
+  def __init__(self, parent, image_buffers):
+    if ImageGrid.existing_instance is not None:
+        ImageGrid.existing_instance.destroy()
+    super().__init__(parent)
+    self.title("Graphs")
+    self.geometry("1480x1600")
+    ImageGrid.existing_instance = self
+    self.canvas = tk.Canvas(self)
+    
+    self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+    self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
-        self.canvas = tk.Canvas(self)
-        
-        self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
-        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+    self.image_frame = ttk.Frame(self.canvas)
+    self.canvas.pack(side="left", fill="both", expand=True)
+    self.scrollbar.pack(side="right", fill="y")
+    self.canvas.create_window((0, 0), window=self.image_frame, anchor="nw")
+    
+    
+    self.menubar = tk.Menu(self)
+    self.config(menu=self.menubar)
+    self.file_menu = tk.Menu(self.menubar,tearoff=False)
+    self.file_menu.add_command(
+        label="Save all",
+        command=self.saveall,
+    )
+    self.menubar.add_cascade(
+        label="File",
+        menu=self.file_menu,
+        underline=0
+    )
 
-        self.image_frame = ttk.Frame(self.canvas)
-        self.canvas.pack(side="left", fill="both", expand=True)
-        self.scrollbar.pack(side="right", fill="y")
-        self.canvas.create_window((0, 0), window=self.image_frame, anchor="nw")
-        
-        
-        self.menubar = tk.Menu(self)
-        self.config(menu=self.menubar)
-        self.file_menu = tk.Menu(self.menubar,tearoff=False)
-        self.file_menu.add_command(
-            label="Save all",
-            command=self.saveall,
-        )
-        self.menubar.add_cascade(
-            label="File",
-            menu=self.file_menu,
-            underline=0
-        )
+    self.images = self.load_images(image_buffers)
+    self.display_images()
 
-        self.images = self.load_images(image_buffers)
-        self.display_images()
+    self.image_frame.update_idletasks()
+    self.canvas.config(scrollregion=self.canvas.bbox("all"))
 
-        self.image_frame.update_idletasks()
-        self.canvas.config(scrollregion=self.canvas.bbox("all"))
-
-        def cleanup():
-            image_buffers.clear_photos()
-            self.destroy()
-        self.protocol("WM_DELETE_WINDOW", cleanup)
+    def cleanup():
+      image_buffers.clear_photos()
+      self.destroy()
+      if ImageGrid.existing_instance == self:
+        ImageGrid.existing_instance = None
+    self.protocol("WM_DELETE_WINDOW", cleanup)
 
 
-    def saveall(self):
-        for img in self.images:
-            self.save_image(img, True)
-    def load_images(self, image_buffers):
-        images = []
-        tem_image = image_buffers.get_photos()
-        if tem_image.__len__() >1:
-          for buffer in tem_image:
-              img = Image.open(io.BytesIO(buffer))
-              img = img.resize((180*4, 180*3))  
-              images.append(ImageTk.PhotoImage(img))
-        else:
-          img = Image.open(io.BytesIO(tem_image[0]))
-          img = img.resize((220*4, 220*3))  
-          self.geometry("910x750")
+  def saveall(self):
+      for img in self.images:
+          self.save_image(img, True)
+  def load_images(self, image_buffers):
+      images = []
+      tem_image = image_buffers.get_photos()
+      if tem_image.__len__() >1:
+        for buffer in tem_image:
+            img = Image.open(io.BytesIO(buffer))
+            img = img.resize((180*4, 180*3))  
+            images.append(ImageTk.PhotoImage(img))
+      else:
+        img = Image.open(io.BytesIO(tem_image[0]))
+        img = img.resize((220*4, 220*3))  
+        self.geometry("910x750")
 
-          images.append(ImageTk.PhotoImage(img)) 
-        return images
+        images.append(ImageTk.PhotoImage(img)) 
+      return images
 
-    def display_images(self):
-        print(len(self.images))
-      # For single graph
-        if len(self.images) == 1:                
-            img=self.images[0]
+  def display_images(self):
+      print(len(self.images))
+    # For single graph
+      if len(self.images) == 1:                
+          img=self.images[0]
+          container = ttk.Frame(self.image_frame)
+          container.pack(side="top")
+          label = tk.Label(container, image=img)
+          label.pack()
+          button_container = ttk.Frame(container)
+          button_container.pack(pady=5,anchor="e")
+          label.image = img
+          save_button = ttk.Button(button_container, text="Save As ", command=lambda img=img: self.save_image(img))
+          save_button.pack(padx=5,side="left")
+          save_as_button = ttk.Button(button_container, text="Save Image", command=lambda img=img: self.save_image(img,True))
+          save_as_button.pack(padx=5,side="left")
+          copy_button = ttk.Button(button_container, text="Copy",command=lambda img=img:self.save_image(img,True,True))
+          copy_button.pack(padx=5,side="left")
+      else:
+        for i, img in enumerate(self.images):
             container = ttk.Frame(self.image_frame)
-            container.pack(side="top")
+            container.grid(row=i // 2, column=i % 2, pady=10, sticky="nsew")
             label = tk.Label(container, image=img)
+          
             label.pack()
             button_container = ttk.Frame(container)
-            button_container.pack(pady=5,anchor="e")
-            label.image = img
+            button_container.pack(pady=5,anchor="center")
+
+            label.image = img  # Keep a reference to avoid garbage collection
             save_button = ttk.Button(button_container, text="Save As ", command=lambda img=img: self.save_image(img))
             save_button.pack(padx=5,side="left")
             save_as_button = ttk.Button(button_container, text="Save Image", command=lambda img=img: self.save_image(img,True))
-            save_as_button.pack(padx=5,side="left")
-            copy_button = ttk.Button(button_container, text="Copy (Windows)",command=lambda img=img:self.save_image(img,True,True))
+            save_as_button.pack(side="left",padx=5)
+            copy_button = ttk.Button(button_container, text="Copy",command=lambda img=img: self.save_image(img,True,True))
             copy_button.pack(padx=5,side="left")
-        else:
-          for i, img in enumerate(self.images):
-              container = ttk.Frame(self.image_frame)
-              container.grid(row=i // 2, column=i % 2, pady=10, sticky="nsew")
-              label = tk.Label(container, image=img)
-            
-              label.pack()
-              button_container = ttk.Frame(container)
-              button_container.pack(pady=5,anchor="center")
-
-              label.image = img  # Keep a reference to avoid garbage collection
-              save_button = ttk.Button(button_container, text="Save As ", command=lambda img=img: self.save_image(img))
-              save_button.pack(padx=5,side="left")
-              save_as_button = ttk.Button(button_container, text="Save Image", command=lambda img=img: self.save_image(img,True))
-              save_as_button.pack(side="left",padx=5)
-              copy_button = ttk.Button(button_container, text="Copy",command=lambda img=img: self.save_image(img,True,True))
-              copy_button.pack(padx=5,side="left")
-            # button1.grid(row=1, column=0)
-              #button2.grid(row=1, column=1)
-              #button3.grid(row=1, column=2)
  
 
-    def save_image(self, img,location=False,clipboard=False):
-        if location:
-          save_path = f"Saved{os.sep}Graph.png"
-          base, ext = os.path.splitext(save_path)
-          counter = 1
-          while os.path.exists(save_path):
-            save_path = f"{base}_{counter}{ext}"
-            counter += 1
-          img._PhotoImage__photo.write(save_path)
-          if clipboard:
-            send_to_clipboard(save_path)
-            os.remove(save_path)
-          
-  
 
+  def save_image(self, img,location=False,clipboard=False):
+    if location:
+      save_path = f"Saved{os.sep}Graph.png"
+      base, ext = os.path.splitext(save_path)
+      counter = 1
+      while os.path.exists(save_path):
+        save_path = f"{base}_{counter}{ext}"
+        counter += 1
+      img._PhotoImage__photo.write(save_path)
+      if clipboard:
+        send_to_clipboard(save_path)
+        os.remove(save_path)
+        
 
-        else:
-          file_path = filedialog.asksaveasfilename(defaultextension=".png",
-                                                  filetypes=[("PNG files", "*.png"),
-                                                              ("JPEG files", "*.jpg"),
-                                                              ("All files", "*.*")])
-          if file_path:
-            print("LLLLLLLLLLLLLLLLLM"+file_path)
-            img._PhotoImage__photo.write(file_path)
+    else:
+      file_path = filedialog.asksaveasfilename(defaultextension=".png",
+                                              filetypes=[("PNG files", "*.png"),
+                                                          ("JPEG files", "*.jpg"),
+                                                          ("All files", "*.*")])
+      if file_path:
+
+        img._PhotoImage__photo.write(file_path)
 
 
 
@@ -297,7 +298,7 @@ class Settings(tk.Toplevel):
       self.normalize_var = tk.BooleanVar()
 
       # Load settings from YAML
-      with open(f"Script{os.sep}config.yaml", "r") as file:
+      with open(f"config.yaml", "r") as file:
           self.settings = yaml.safe_load(file)
 
       # Set initial values
@@ -364,7 +365,7 @@ class Settings(tk.Toplevel):
 
   def save_yaml(self, data):
       """Save data to the YAML file."""
-      with open(f"Script{os.sep}config.yaml", "w") as file:
+      with open(f"config.yaml", "w") as file:
           yaml.safe_dump(data, file)
 
 
@@ -421,7 +422,7 @@ class CalcTab(ttk.Frame):
 
 
 
-    ''''Right frame'''
+    """Right frame"""
 
 
     right_frame=ttk.Frame(self)
@@ -446,7 +447,7 @@ class CalcTab(ttk.Frame):
     entry.pack(pady=10,side="top")
     entry.bind("<KeyRelease>", lambda event: validate())
 
-    ''''Bottom right frame'''
+    """Bottom right frame"""
 
     bottom_right_frame=ttk.Frame(right_frame)
     bottom_right_frame.pack(pady=20,padx=20)
@@ -541,7 +542,7 @@ class PlasTab(ttk.Frame):
 
     settings_button = ttk.Button(left_frame, text="Settings", command=lambda:Settings(self))
     settings_button.pack(pady=30)
-    ''''Middle Frame'''
+    """Middle Frame"""
     
 
     properties_frame=ttk.Frame(self)
@@ -700,7 +701,7 @@ class FracTab(ttk.Frame):
  
 
 
-    ''''Left frame'''
+    """Left frame"""
 
 
     left_frame=ttk.Frame(canvas)
@@ -837,10 +838,10 @@ class FracTab(ttk.Frame):
         confirm_button = ttk.Button(button_frame, text="Confirm", command=lambda: frac_calculate(path, get_selected()))           
         compare_button = ttk.Button(button_frame, text="Compare", command=lambda: frac_compare(path, get_selected()))           
         summary_button = ttk.Button(button_frame, text="Summary", command=lambda: frac_summary(path, get_selected()))           
-        summary_button_compare = ttk.Button(button_frame, text="Sum Comp", command=lambda: frac_summary_multiple(path, get_selected()))           
-        confirm_compare_button = ttk.Button(button_frame, text="Confirm Comp", command=lambda: frac_one_name(path, get_selected()))           
-        force_direction_button = ttk.Button(button_frame, text="Force Dir", command=lambda: force_displacement(path, "Force"))           
-        displacement_direction_button = ttk.Button(button_frame, text="Displacement Dir", command=lambda: force_displacement(path, "Displacement"))           
+        summary_button_compare = ttk.Button(button_frame, text="Diection Comp", command=lambda: frac_summary_multiple(path, get_selected()))           
+        confirm_compare_button = ttk.Button(button_frame, text="ForceComp", command=lambda: frac_one_name(path, get_selected()))           
+        force_direction_button = ttk.Button(button_frame, text="Force/Dir", command=lambda: force_displacement(path, "Force"))           
+        displacement_direction_button = ttk.Button(button_frame, text="Displacement/Dir", command=lambda: force_displacement(path, "Displacement"))           
 
         confirm_button.grid(row=0, column=0, padx=5, pady=5)
         compare_button.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
@@ -864,17 +865,14 @@ class FracTab(ttk.Frame):
 
 
 
-
-
-
-
+ 
 
 
 class CompTab(ttk.Frame):
   def __init__(self,parent, notebook,materials,buffer):
     super().__init__(parent)
 
-    Excel_processed=address()[1]
+ 
 
 
       
@@ -890,10 +888,15 @@ class CompTab(ttk.Frame):
     canvas.pack(side="left",expand=True,fill="both")
     
     def validate():
-        if any(var.get() for var in self.material_vars.values()) and  any(var.get() for var in self.property_vars.values()):
-          compare_button.config(state=tk.NORMAL)
-        else:
-          compare_button.config(state=tk.DISABLED)
+      if any(var.get() for var in self.material_vars.values()) and  any(var.get() for var in self.property_vars.values()):
+        compare_button_DD.config(state=tk.NORMAL)
+        compare_button_TD.config(state=tk.NORMAL)
+        compare_button_RD.config(state=tk.NORMAL)
+
+      else:
+        compare_button_DD.config(state=tk.DISABLED)
+        compare_button_TD.config(state=tk.DISABLED)
+        compare_button_RD.config(state=tk.DISABLED)
 
 
 
@@ -912,7 +915,7 @@ class CompTab(ttk.Frame):
       chk.grid(row=idx+1, column=0, sticky="w")
       self.material_vars[material] = var
 
-    def compare_caller():
+    def compare_caller(angle):
       selected_materials = [mat for mat, var in self.material_vars.items() if var.get()]
       selected = [prop for prop, var in self.property_vars.items() if var.get()]
 
@@ -920,7 +923,7 @@ class CompTab(ttk.Frame):
       
    
       for p in selected:
-        buffer.add_photo(im.compare(address()[1],selected_materials,p))
+        buffer.add_photo(im.compare(address()[1],selected_materials,p,angle))
 
 
 
@@ -960,8 +963,13 @@ class CompTab(ttk.Frame):
 
 
 
-    compare_button=ttk.Button(properties_frame,text="Compare",command=lambda :compare_caller(),state=tk.DISABLED)
-    compare_button.pack(pady=10)  
+    compare_button_RD=ttk.Button(properties_frame,text="Compare RD",command=lambda :compare_caller("RD"),state=tk.DISABLED)
+    compare_button_RD.pack(pady=10)  
+    compare_button_TD=ttk.Button(properties_frame,text="Compare TD",command=lambda :compare_caller("DD"),state=tk.DISABLED)
+    compare_button_TD.pack(pady=10)  
+    compare_button_DD=ttk.Button(properties_frame,text="Compare DD",command=lambda :compare_caller("TD"),state=tk.DISABLED)
+    compare_button_DD.pack(pady=10)  
+
 
 
 
@@ -1014,7 +1022,7 @@ class AnisTab(ttk.Frame):
     settings_button.pack(pady=30)
 
 
-    ''''Middle Frame'''
+    """Middle Frame"""
 
 
 
@@ -1134,7 +1142,7 @@ class AnisTab(ttk.Frame):
 #       radio.pack(anchor="sw",pady=3)
 
 
-#     ''''Middle Frame'''
+#     """Middle Frame"""
     
 
 #     properties_frame=ttk.Frame(self)
@@ -1176,8 +1184,6 @@ class AnisTab(ttk.Frame):
 
  
 
-
- 
 def main(): 
   ctypes.windll.shcore.SetProcessDpiAwareness(1) # Fix scaling so text isn't blurry on windows. Test on other devices
   App()

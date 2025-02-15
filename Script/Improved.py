@@ -5,27 +5,17 @@ from scipy import stats
 import os
 import yaml
 from io import BytesIO
-#from scipy.optimize import curve_fit
-#from scipy.interpolate import CubicSpline
-#from openpyxl import load_workbook
-# import numpy
-
-
-
-'''Organize all the functions in the script'''
-
-
-#Default values
-# add option to change the default values in settings 
  
-# set the default values for the plot
+
+
+
  
 
 legend_on=True
 normalized=True
 
 def configs():
-    with open(f"Script{os.sep}config.yaml") as file:
+    with open(f"config.yaml") as file:
         config = yaml.full_load(file)
 
 
@@ -84,12 +74,13 @@ def repeatablity (path,sheet_name,func_name,setting_fn=None):
     directions = list(set(tests_series.values()))
     geo_name = tests_list[0].split("_",1)[0]
     buffers = []
+    plt.clf()
 
     for dire in directions:
+        plt.clf()
         
         totalx=[]
         totaly=[]
-        plt.clf()
         for i in range(6):
             test_name = f"{geo_name}_{dire}_{i+1}"
             try:
@@ -139,33 +130,32 @@ def repeatablity (path,sheet_name,func_name,setting_fn=None):
 
 
 
-
  
 
+##Add options for DD and TD
 
-
-
-
-
-def compare(address,materials,func_name,setting_fn=None):
+def compare(address,materials,func_name,angle="RD",setting_fn=None):
     plt.clf()
-    colors=['b', 'g', 'r', 'c','m', 'y', 'k']
+    colors=["b", "g", "r", "c","m", "y", "k"]
     x_name,y_name,xlabel,ylabel=xy_values(func_name)
 
     for i,material in enumerate(materials):
-        path = f"{address}{os.sep}{material}.xlsx"
-        data_frame = pd.read_excel(path,sheet_name="Sheet1",header=([0,1,2]),index_col=0)
-        test_name = f'SDB_RD_1'
-        x = data_frame[test_name]["Calculation"][x_name]
-        y = data_frame[test_name]["Calculation"][y_name]
-        if x.isna().any() or y.isna().any():
-            test_name = 'SDB_RD_2'
+        try:
+            path = f"{address}{os.sep}{material}.xlsx"
+            data_frame = pd.read_excel(path,sheet_name="Sheet1",header=([0,1,2]),index_col=0)
+            test_name = f"SDB_{angle}_1"
             x = data_frame[test_name]["Calculation"][x_name]
             y = data_frame[test_name]["Calculation"][y_name]
-        material_name, separator, remainder = material.partition('_')
-        plt.plot(x,y,label=f'{material_name}',color=colors[i])
-        plt.xlabel(xlabel)
-        plt.ylabel(ylabel)
+            if x.isna().any() or y.isna().any():
+                test_name = f"SDB_{angle}_2"
+                x = data_frame[test_name]["Calculation"][x_name]
+                y = data_frame[test_name]["Calculation"][y_name]
+            material_name, separator, remainder = material.partition("_")
+            plt.plot(x,y,label=f"{material_name}",color=colors[i])
+            plt.xlabel(xlabel)
+            plt.ylabel(ylabel)
+        except:
+            continue
     if legend_on:
         plt.legend()
     if func_name == "r-value":
@@ -174,67 +164,13 @@ def compare(address,materials,func_name,setting_fn=None):
         setting_fn()
     #plt.show()
     buffer = BytesIO()
-    plt.savefig(buffer, format='PNG', bbox_inches='tight')
+    plt.savefig(buffer, format="PNG", bbox_inches="tight")
     buffer.seek(0)  # Reset buffer's position to the start
     return buffer.getvalue()
     
 
 
-    
-def FDset():
-    plt.rcParams['font.family'] = 'Arial'
-    plt.rcParams['font.size'] = 16
-    plt.xlabel("Displacement, -")
-    plt.ylabel("Force, kN")
-    plt.xlim([0,2.5])
-    plt.ylim([0,14])
-    plt.legend()
 
-def FDplot(series_list):
-    plt.clf()
-    # Iterate over each series in the list
-    for series in series_list:
-        # Read the Excel sheet
-        sheet = pd.read_excel(series["path"], series["sheetname"], header=[0,1])
-        mainID = series["mainID"]
-        
-        # Extract x and y data, dropping NaN values
-        x = sheet[mainID][series["x_name"]].dropna()
-        y = sheet[mainID][series["y_name"]].dropna()
-        
-        # Check if x or y data is empty
-        if x.empty or y.empty:
-            print(f"Data for series {series.get('label', mainID)} is empty. Skipping this series.")
-            continue  # Skip to the next series
-        
-        # Retrieve plotting parameters with defaults
-        label = series.get('label', None)
-        color = series.get('color', 'black')
-        mark_end = series.get('mark_end', False)
-        line_style = series.get('line_style', '-')
-        linewidth = series.get("linewidth", 1.5)
-        
-        # Plotting logic
-        if label is None:
-            if mark_end:
-                plt.plot(x, y, color=color, linestyle=line_style, linewidth=linewidth)
-                plt.scatter(x.iloc[-1], y.iloc[-1], s=70, marker="*", color=color)
-            else:
-                plt.plot(x, y, color=color, linestyle=line_style, linewidth=linewidth)
-        else:
-            if mark_end:
-                plt.plot(x, y, label=label, color=color, linestyle=line_style, linewidth=linewidth)
-                plt.scatter(x.iloc[-1], y.iloc[-1], s=70, marker="*", color=color)
-            else:
-                plt.plot(x, y, label=label, color=color, linestyle=line_style, linewidth=linewidth)
-                
-    # Display legend if any labels are provided
-    if any('label' in series for series in series_list):
-        plt.legend()
- 
-    plt.xlabel("Displacement, mm")
-    plt.ylabel("Force, kN")
- 
 
 def calculate_youngs_modulus(strain, stress, stress_limit=500):
     
@@ -262,7 +198,7 @@ def calculation(path,sheet_name,stress_limit=500,modified=False):
 
     data_frame=pd.read_excel(path,sheet_name=sheet_name,header=([0,1,2]))
     tests_list = data_frame.columns.get_level_values(0).unique().tolist()
-    tests_series = {s : s.split('_', 2)[1] for s in tests_list}
+    tests_series = {s : s.split("_", 2)[1] for s in tests_list}
 
     for key in tests_series.keys():
         test_name = key
@@ -429,8 +365,7 @@ def custom_plot(path,tests_list,func_name,setting_fn=None):
     plt.title(f'Custom plot')
     if setting_fn:
         setting_fn()
-    print("DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")
-    #plt.show()
+     #plt.show()
     buffer = BytesIO()
     plt.savefig(buffer, format='PNG', bbox_inches='tight')
     buffer.seek(0)  # Reset buffer's position to the start
@@ -588,10 +523,7 @@ def fracture_repeat(path,sheet_name,setting_fn=None):
 
 def fracture_normal_compare(path,sheet_names,setting_fn=None):
  
-#     dataframes=[]
-#     for sheet_name in sheet_names:
-#         data_frame.append(pd.read_excel(path,sheet_name=sheet_name,header=([0,1,2]),index_col=0)
-# )
+ 
 
     data_frame = pd.read_excel(path,sheet_name=sheet_names[0],header=([0,1,2]),index_col=0)
     
@@ -723,16 +655,7 @@ def fracture_compare_summary(path,sheet_names,setting_fn=None):
 
 
 
-
-
-
-
-
-
-
-
-
-
+ 
 
 
 
@@ -754,14 +677,21 @@ def summary(path,sheet_name,func_name,letters=False,setting_fn=None):
     if letters:
         directions = ['RD', 'DD', 'TD']
     for dire in directions:
-        test_name = f'{geo_name}_{dire}_{1}'
-        x = data_frame[test_name]["Calculation"][x_name]
-        y = data_frame[test_name]["Calculation"][y_name]
-        start_index = x[x > 0.0001].index[0]  
-        x = x.loc[start_index:]          
-        y = y.loc[start_index:] 
+        try:
+            test_name = f'{geo_name}_{dire}_{1}'
+            x = data_frame[test_name]["Calculation"][x_name]
+            y = data_frame[test_name]["Calculation"][y_name]
+        
+            start_index = x[x > 0.0001].index[0]  
+            
+                
+                
+            x = x.loc[start_index:]          
+            y = y.loc[start_index:] 
 
-        plt.plot(x,y,label=f'{dire}',)
+            plt.plot(x,y,label=f'{dire}',)
+        except:
+            continue
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
 
@@ -798,31 +728,33 @@ def Normalized_plot(path,quality="Displacement"):
     sheet_names=[ 'NDBR25', 'NDBR6', 'NDBR2', 'NDBR02', 'SH','CHD6']
 
     for sheet_name in sheet_names:
-        data_frame = pd.read_excel(path,sheet_name=sheet_name,header=([0,1,2]),index_col=0)
-        old_list = data_frame.columns.get_level_values(0).unique().tolist()
-        new_list = list({s.rsplit('_', 1)[0] for s in old_list})
-        for test in (new_list):
-            print(sheet_name+"AND "+test)
+        try:
+            data_frame = pd.read_excel(path,sheet_name=sheet_name,header=([0,1,2]),index_col=0)
+            old_list = data_frame.columns.get_level_values(0).unique().tolist()
+            new_list = list({s.rsplit('_', 1)[0] for s in old_list})
+            for test in (new_list):
+                print(sheet_name+"AND "+test)
 
-            #print(test)
-            x = data_frame[f'{str(test)}_{1}'][row1][row2].dropna()
-            if ((str(test)[-2:])=="DD"):
-                try:
-                    ddx.append((x.iloc[-1:]).tail(1).values[0])
-                except IndexError:
-                    ddx.append(None)
+                #print(test)
+                x = data_frame[f'{str(test)}_{1}'][row1][row2].dropna()
+                if ((str(test)[-2:])=="DD"):
+                    try:
+                        ddx.append((x.iloc[-1:]).tail(1).values[0])
+                    except IndexError:
+                        ddx.append(None)
 
-            if ((str(test)[-2:])=="RD"):
-                try:
-                    rdx.append((x.iloc[-1:]).tail(1).values[0])
-                except IndexError:
-                    rdx.append(None)            
-            if ((str(test)[-2:])=="TD"):
-                try:
-                    tdx.append((x.iloc[-1:]).tail(1).values[0])
-                except IndexError:
-                    tdx.append(None)
-
+                if ((str(test)[-2:])=="RD"):
+                    try:
+                        rdx.append((x.iloc[-1:]).tail(1).values[0])
+                    except IndexError:
+                        rdx.append(None)            
+                if ((str(test)[-2:])=="TD"):
+                    try:
+                        tdx.append((x.iloc[-1:]).tail(1).values[0])
+                    except IndexError:
+                        tdx.append(None)
+        except:
+            continue
 
     if normalized:
         result_rd = [a / b if a is not None and b is not None else None for a, b in zip(rdx, rdx)]
@@ -858,10 +790,7 @@ def Normalized_plot(path,quality="Displacement"):
    
  ################
 
-
-
- ################
-
+ 
 
 
 
@@ -879,7 +808,6 @@ def Normalized_plot(path,quality="Displacement"):
 
 def fracture_compare(address,sheet_name,materials,setting_fn=None):
     plt.clf()
-    print("hhhhhhhhhhhhhhhh")
     print(materials)
     print(sheet_name)
     address=(os.path.dirname(address))
@@ -922,17 +850,7 @@ def fracture_compare(address,sheet_name,materials,setting_fn=None):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
+ 
 
 
  
@@ -1146,3 +1064,61 @@ if __name__ == '__main__':
   main()
 
 
+
+
+
+    
+def FDset():
+    plt.rcParams["font.family"] = "Arial"
+    plt.rcParams["font.size"] = 16
+    plt.xlabel("Displacement, -")
+    plt.ylabel("Force, kN")
+    plt.xlim([0,2.5])
+    plt.ylim([0,14])
+    plt.legend()
+
+def FDplot(series_list):
+    plt.clf()
+    # Iterate over each series in the list
+    for series in series_list:
+        # Read the Excel sheet
+        sheet = pd.read_excel(series["path"], series["sheetname"], header=[0,1])
+        mainID = series["mainID"]
+        
+        # Extract x and y data, dropping NaN values
+        x = sheet[mainID][series["x_name"]].dropna()
+        y = sheet[mainID][series["y_name"]].dropna()
+        
+        # Check if x or y data is empty
+        if x.empty or y.empty:
+            print(f"Data for series {series.get('label', mainID)} is empty. Skipping this series.")
+            continue  # Skip to the next series
+        
+        # Retrieve plotting parameters with defaults
+        label = series.get("label", None)
+        color = series.get("color", "black")
+        mark_end = series.get("mark_end", False)
+        line_style = series.get("line_style", "-")
+        linewidth = series.get("linewidth", 1.5)
+        
+        # Plotting logic
+        if label is None:
+            if mark_end:
+                plt.plot(x, y, color=color, linestyle=line_style, linewidth=linewidth)
+                plt.scatter(x.iloc[-1], y.iloc[-1], s=70, marker="*", color=color)
+            else:
+                plt.plot(x, y, color=color, linestyle=line_style, linewidth=linewidth)
+        else:
+            if mark_end:
+                plt.plot(x, y, label=label, color=color, linestyle=line_style, linewidth=linewidth)
+                plt.scatter(x.iloc[-1], y.iloc[-1], s=70, marker="*", color=color)
+            else:
+                plt.plot(x, y, label=label, color=color, linestyle=line_style, linewidth=linewidth)
+                
+    # Display legend if any labels are provided
+    if any("label" in series for series in series_list):
+        plt.legend()
+ 
+    plt.xlabel("Displacement, mm")
+    plt.ylabel("Force, kN")
+ 

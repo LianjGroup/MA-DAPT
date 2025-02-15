@@ -7,6 +7,6 @@ matplotlib:
     size: 10
   legend:
     fontsize: 16
-    'on': false
+    'on': true
 misc:
-  normalized: true
+  normalized: false
