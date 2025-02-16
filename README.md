@@ -25,7 +25,7 @@ pip install tkinter pandas pillow pyyaml matplotlib numpy scipy
 3. Open folder in code editor
 NOTE: Make sure to open the MADAPT folder and not the script folder. Script folder will be removed in future release
   
-4. Create a build:
+4. Build executable:
 ```bash  
 pip install pyinstaller
 pyinstaller --onefile --windowed FinalGUI.py
