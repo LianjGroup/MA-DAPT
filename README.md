@@ -23,12 +23,11 @@ pip install tkinter pandas pillow pyyaml matplotlib numpy scipy
 ```
 2. Download and extract source code
 3. Open folder in code editor
-NOTE: Make sure to open the MADAPT folder and not the script folder. Script folder will be removed in future release
-  
+   
 4. Build executable:
 ```bash  
 pip install pyinstaller
 pyinstaller --onefile --windowed FinalGUI.py
 ```
-
+NOTE: Release will be in Dist folder. The config file and data banks need to be moved manually.
  
