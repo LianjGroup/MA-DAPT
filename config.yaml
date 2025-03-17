@@ -8,5 +8,14 @@ matplotlib:
   legend:
     fontsize: 16
     'on': true
+  limits:
+    xlim:
+    - 4.0
+    - 2.0
+    xlim_enabled: false
+    ylim:
+    - 6.0
+    - 9.0
+    ylim_enabled: false
 misc:
   normalized: false

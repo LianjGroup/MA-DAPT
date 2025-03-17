@@ -8,7 +8,9 @@ from PIL import Image, ImageTk
 import Improved as im
 import traceback
 
-     
+     # Logo based on name
+     # Add more about about info
+     # Add settings to change x lims 
 
 import sys
 if sys.platform == "win32":
@@ -50,7 +52,7 @@ class App(tk.Tk):    # Basic App blueprint. Tabs with features are added to it
       def cause_error():
           raise RuntimeError("money!")
 
-      btn = tk.Button(self, text="Cause Error", command=cause_error)
+      btn = tk.Button(self, text="This is an easter egg I'm too lazy to remove", command=cause_error)
       btn.pack(pady=20)
 
 
@@ -125,13 +127,13 @@ def validate_input(new_value): #Ensures only numbers can be entered
 
 
 def send_to_clipboard(name):
-    image = Image.open(name)
+    image = Image.open(name)                                          
     output = io.BytesIO()
-    image.convert("RGB").save(output, "BMP")
-    data = output.getvalue()[14:]
+    image.convert("RGB").save(output, "BMP")     #Take image as rgb buffer
+    data = output.getvalue()[14:]            # Cut Header
     output.close()
 
-    if sys.platform == "win32":
+    if sys.platform == "win32":                    # For winodws
         win32clipboard.OpenClipboard()
         win32clipboard.EmptyClipboard()
         win32clipboard.SetClipboardData(win32clipboard.CF_DIB, data)
@@ -146,17 +148,22 @@ def send_to_clipboard(name):
         )
         process.communicate(output.getvalue())
 
+    ## Add linux version
+
+
 
 class ImageGrid(tk.Toplevel):
-  existing_instance = None  
+  existing_instance = None   
   def __init__(self, parent, image_buffers):
-    if ImageGrid.existing_instance is not None:
+    if ImageGrid.existing_instance is not None:   # Ensures only one (latest) window exists
         ImageGrid.existing_instance.destroy()
+
+
     super().__init__(parent)
     self.title("Graphs")
     self.geometry("1480x1600")
     ImageGrid.existing_instance = self
-    self.canvas = tk.Canvas(self)
+    self.canvas = tk.Canvas(self, highlightthickness=0)
     
     self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
     self.canvas.configure(yscrollcommand=self.scrollbar.set)
@@ -281,7 +288,7 @@ class Settings(tk.Toplevel):
   def __init__(self, parent):
       super().__init__(parent)
       self.title("Settings")
-      self.geometry("500x600")
+      self.geometry("500x900")
 
       # Variables
       self.font_family_var = tk.StringVar()
@@ -297,6 +304,15 @@ class Settings(tk.Toplevel):
 
       self.normalize_var = tk.BooleanVar()
 
+      self.xlim_min_var = tk.DoubleVar()
+      self.xlim_max_var = tk.DoubleVar()
+      self.ylim_min_var = tk.DoubleVar()
+      self.ylim_max_var = tk.DoubleVar()
+
+      self.xlim_enabled_var = tk.BooleanVar()
+      self.ylim_enabled_var = tk.BooleanVar()
+          
+
       # Load settings from YAML
       with open(f"config.yaml", "r") as file:
           self.settings = yaml.safe_load(file)
@@ -310,9 +326,18 @@ class Settings(tk.Toplevel):
       self.legend_fontsize_var.set(str(self.settings["matplotlib"]["legend"]["fontsize"]))
       self.normalize_var.set(self.settings["misc"]["normalized"])
       
-      
+      self.xlim_enabled_var.set(self.settings["matplotlib"]["limits"]["xlim_enabled"])
+      self.ylim_enabled_var.set(self.settings["matplotlib"]["limits"]["ylim_enabled"])
+
+      self.xlim_min_var.set(self.settings["matplotlib"]["limits"]["xlim"][0])
+      self.xlim_max_var.set(self.settings["matplotlib"]["limits"]["xlim"][1])
+
+      self.ylim_min_var.set(self.settings["matplotlib"]["limits"]["ylim"][0])
+      self.ylim_max_var.set(self.settings["matplotlib"]["limits"]["ylim"][1])
+
+
       # GUI Layout
-      ttk.Label(self, text="Font Family:").grid(row=1, column=0, sticky="w", padx=10)
+      ttk.Label(self, text="Font Family:").grid(row=1, column=0, sticky="w", padx=10,pady=20)
       font_families = ["Arial", "Times New Roman", "Cursive","Comic Sans"]
       ttk.Combobox(self, textvariable=self.font_family_var, values=font_families, state="readonly").grid(row=1, column=1, padx=10)
 
@@ -336,16 +361,36 @@ class Settings(tk.Toplevel):
       ttk.Label(self, text="Normalization:").grid(row=7, column=0, sticky="w", padx=10)
       ttk.Checkbutton(self, variable=self.normalize_var).grid(row=7, column=1, padx=10, sticky="w")
 
+# X Lim Min and Max
+      ttk.Label(self, text="X Lim Min:").grid(row=8, column=0, sticky="w", padx=10)
+      ttk.Entry(self, textvariable=self.xlim_min_var, validate="key").grid(row=8, column=1, padx=10)
 
-      
+      ttk.Label(self, text="X Lim Max:").grid(row=9, column=0, sticky="w", padx=10)
+      ttk.Entry(self, textvariable=self.xlim_max_var, validate="key").grid(row=9, column=1, padx=10)
+
+      # X Lim Enabled Checkbox
+      ttk.Label(self, text="Enable X Lim:").grid(row=10, column=0, sticky="w", padx=10)
+      ttk.Checkbutton(self, variable=self.xlim_enabled_var).grid(row=10, column=1, padx=10, sticky="w")
+
+      # Y Lim Min and Max
+      ttk.Label(self, text="Y Lim Min:").grid(row=11, column=0, sticky="w", padx=10)
+      ttk.Entry(self, textvariable=self.ylim_min_var, validate="key").grid(row=11, column=1, padx=10)
+
+      ttk.Label(self, text="Y Lim Max:").grid(row=12, column=0, sticky="w", padx=10)
+      ttk.Entry(self, textvariable=self.ylim_max_var, validate="key").grid(row=12, column=1, padx=10)
+
+      # Y Lim Enabled Checkbox
+      ttk.Label(self, text="Enable Y Lim:").grid(row=13, column=0, sticky="w", padx=10)
+      ttk.Checkbutton(self, variable=self.ylim_enabled_var).grid(row=13, column=1, padx=10, sticky="w")
+
     
-      ttk.Label(self, text="About", font=("Arial", 12)).grid(row=8, column=0, columnspan=2, pady=10)
+      ttk.Label(self, text="About", font=("Arial", 12)).grid(row=18, column=0, columnspan=2, pady=10)
       
-      ttk.Label(self, text="MA-DAPT is created by Guijia Li and Saad Zia\nVersion: 0.4", font=("Arial", 10)).grid(row=9, column=0, columnspan=3, pady=10,rowspan=2)
-      ttk.Label(self, text="License: MIT License\nThis software is open-source and provided 'as-is',\nwithout warranty of any kind, express or implied.", font=("Arial", 10)).grid(row=11, column=0, columnspan=3, pady=10,rowspan=3)
+      ttk.Label(self, text="MA-DAPT is created by Guijia Li and Saad Zia\nVersion: 0.4", font=("Arial", 10)).grid(row=19, column=0, columnspan=3, pady=10,rowspan=2)
+      ttk.Label(self, text="License: MIT License\nThis software is open-source and provided 'as-is',\nwithout warranty of any kind, express or implied.", font=("Arial", 10)).grid(row=21, column=0, columnspan=3, pady=10,rowspan=3)
     
       # Save Button
-      ttk.Button(self, text="Save", command=self.save_settings).grid(row=14, column=0, pady=20)
+      ttk.Button(self, text="Save", command=self.save_settings).grid(row=28, column=0, pady=20)
 
  
 
@@ -359,6 +404,18 @@ class Settings(tk.Toplevel):
       self.settings["matplotlib"]["legend"]["fontsize"] = int(self.legend_fontsize_var.get())
       self.settings["misc"]["normalized"]= self.normalize_var.get()
 
+
+      self.settings["matplotlib"]["limits"]["xlim"] = [
+          self.xlim_min_var.get(), self.xlim_max_var.get()]
+  
+      self.settings["matplotlib"]["limits"]["ylim"] = [
+          self.ylim_min_var.get(), self.ylim_max_var.get()]
+      
+      self.settings["matplotlib"]["limits"]["xlim_enabled"] = self.xlim_enabled_var.get()
+
+      self.settings["matplotlib"]["limits"]["ylim_enabled"] = self.ylim_enabled_var.get()
+
+      
       self.save_yaml(self.settings)
       print("Settings saved successfully!")
       im.configs()
@@ -672,13 +729,13 @@ class PlasTab(ttk.Frame):
     short_check.grid(row=1,column=0, padx=5, pady=5)
     summary_button.grid(row=1,column=1, padx=5, pady=5)
 
-    uts_button=ttk.Button(button_frame, text="UTS", command=uts)
+    uts_button=ttk.Button(button_frame, text="UTS", command=uts,state=tk.DISABLED)
     uts_button.grid(row=2,column=0, padx=5, pady=5)
 
-    yts_button=ttk.Button(button_frame, text="YTS", command=yts)
+    yts_button=ttk.Button(button_frame, text="YTS", command=yts,state=tk.DISABLED)
     yts_button.grid(row=2,column=1, padx=5, pady=5)
 
-    R_button=ttk.Button(button_frame, text="R values", command=yieldr)
+    R_button=ttk.Button(button_frame, text="R values", command=yieldr,state=tk.DISABLED)
     R_button.grid(row=3,column=0, padx=5, pady=5,columnspan=2)
 
 
@@ -766,6 +823,8 @@ class FracTab(ttk.Frame):
         path = f"{Excel_raw}{os.sep}{self.selected_calc_mat.get()}.xlsx"
         all_sheets = pd.ExcelFile(path).sheet_names
         filtered_sheets = [sheet for sheet in all_sheets if "SDB" not in sheet and "Tests" not in sheet]
+        #filtered_sheets = [sheet for sheet in all_sheets if "Tests" not in sheet]
+       
         sheet_list = list(filtered_sheets)
         self.checkbox_vars = {}
         for header in sheet_list:

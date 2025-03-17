@@ -29,7 +29,22 @@ def configs():
     global legend_on,normalized,excel_raw,excel_processed
     legend_on=config["matplotlib"]["legend"]["on"]
     normalized=config["misc"]["normalized"]
-configs()
+
+    xls=(config["matplotlib"]["limits"]["xlim"]) 
+    xcheck=(config["matplotlib"]["limits"]["xlim_enabled"]) 
+    ycheck=(config["matplotlib"]["limits"]["ylim_enabled"]) 
+
+    yls=(config["matplotlib"]["limits"]["ylim"]) 
+
+
+    lims=[xcheck,xls,ycheck,yls]
+ 
+ 
+    return lims
+    # if config["matplotlib"].get("ylim_enabled", False):
+    #     plt.ylim(config["matplotlib"]["ylim"])  
+
+limits=configs()
 
  
 
@@ -75,6 +90,11 @@ def repeatablity (path,sheet_name,func_name,setting_fn=None):
     geo_name = tests_list[0].split("_",1)[0]
     buffers = []
     plt.clf()
+    limits=configs()
+    if (limits[0]):
+        plt.xlim(limits[1])
+    if (limits[2]):
+        plt.ylim(limits[3])
 
     for dire in directions:
         plt.clf()
@@ -136,6 +156,11 @@ def repeatablity (path,sheet_name,func_name,setting_fn=None):
 
 def compare(address,materials,func_name,angle="RD",setting_fn=None):
     plt.clf()
+    limits=configs()
+    if (limits[0]):
+        plt.xlim(limits[1])
+    if (limits[2]):
+        plt.ylim(limits[3])
     colors=["b", "g", "r", "c","m", "y", "k"]
     x_name,y_name,xlabel,ylabel=xy_values(func_name)
 
@@ -341,6 +366,11 @@ def rvalue(path,sheet_name):
  
 def custom_plot(path,tests_list,func_name,setting_fn=None):
     plt.clf()
+    limits=configs()
+    if (limits[0]):
+        plt.xlim(limits[1])
+    if (limits[2]):
+        plt.ylim(limits[3])
 
     x_name,y_name,xlabel,ylabel=xy_values(func_name)
 
@@ -374,6 +404,11 @@ def custom_plot(path,tests_list,func_name,setting_fn=None):
 def uts_plot(path,sheet_name):
     #plot the direction dependency of properties.
     plt.clf()
+    limits=configs()
+    if (limits[0]):
+        plt.xlim(limits[1])
+    if (limits[2]):
+        plt.ylim(limits[3])
     data_frame = pd.read_excel(path,sheet_name=sheet_name,header=([0,1,2]),index_col=0)
     tests_list = data_frame.columns.get_level_values(0).unique().tolist()     
      #assign direction to test number
@@ -404,7 +439,7 @@ def uts_plot(path,sheet_name):
                 te=x.max()
                 te_values.append(te)
 
-                 
+ 
 
 
             except KeyError:
@@ -452,6 +487,12 @@ def uts_plot(path,sheet_name):
 
 def orientation (path,sheet_name,func_name,dire_test,setting_fn=None):
     plt.clf()
+    limits=configs()
+
+    if (limits[0]):
+        plt.xlim(limits[1])
+    if (limits[2]):
+        plt.ylim(limits[3])
     x_name,y_name,xlabel,ylabel=xy_values(func_name)
 
     #plot the direction dependency of properties.
@@ -490,17 +531,31 @@ def orientation (path,sheet_name,func_name,dire_test,setting_fn=None):
     return buffer.getvalue()
 
 def fracture_repeat(path,sheet_name,setting_fn=None):
+    print(f"fracture_repeat({path},{sheet_name},setting_fn=None)")
 
     data_frame = pd.read_excel(path,sheet_name=sheet_name,header=([0,1,2]),index_col=0)
     old_list = data_frame.columns.get_level_values(0).unique().tolist()
     new_list = list({s.rsplit('_', 1)[0] for s in old_list})
     buffers = []
+    print(old_list)
+ 
     for index, test in enumerate(new_list):
         plt.clf()
+        limits=configs()
+
+        if (limits[0]):
+            plt.xlim(limits[1])
+        if (limits[2]):
+            plt.ylim(limits[3])
+ 
         for i in range(3): 
+       
             try:
                 x = data_frame[f'{str(test)}_{i+1}']["Disp_Y"]["∆L [mm]"].dropna()
                 y = data_frame[f'{str(test)}_{i+1}']["Machine"]["Force"].dropna()
+                min_len = min(len(x), len(y))
+                x = x.iloc[:min_len]
+                y = y.iloc[:min_len]
                 plt.plot(x,y,label=i+1)
                 if not x.empty and not y.empty:
                     plt.scatter(x.iloc[-1], y.iloc[-1], s=70, marker="*")
@@ -532,6 +587,12 @@ def fracture_normal_compare(path,sheet_names,setting_fn=None):
     buffers = []
     for index, test in enumerate(new_list):
         plt.clf()
+        limits=configs()
+
+        if (limits[0]):
+            plt.xlim(limits[1])
+        if (limits[2]):
+            plt.ylim(limits[3])
         for i in range(3): 
             try:
                 print(sheet_names)
@@ -569,13 +630,27 @@ def fracture_normal_compare(path,sheet_names,setting_fn=None):
     
 
 def fracture_summary(path,sheet_name,setting_fn=None):
+    print(sheet_name,"44444")
     data_frame = pd.read_excel(path,sheet_name=sheet_name,header=([0,1,2]),index_col=0)
     old_list = data_frame.columns.get_level_values(0).unique().tolist()
     new_list = list({s.rsplit('_', 1)[0] for s in old_list})
     plt.clf()
+    limits=configs()
+
+    if (limits[0]):
+        plt.xlim(limits[1])
+    if (limits[2]):
+        plt.ylim(limits[3])
+    yname="Disp_Y"
+    if sheet_name[-3:]=="SDB":
+        yname="DIC_Y"		
+        print(new_list)	
+        new_list=["SDB_DD","SDB_RD","SDB_TD"]
     for index, test in enumerate(new_list):
+        print(test)
         try:
-            x = data_frame[f'{str(test)}_{1}']["Disp_Y"]["∆L [mm]"].dropna()
+            print("C")
+            x = data_frame[f'{str(test)}_{1}'][yname]["∆L [mm]"].dropna()
             y = data_frame[f'{str(test)}_{1}']["Machine"]["Force"].dropna()
             plt.plot(x,y,label=str(test)[-2:])
             if not x.empty and not y.empty:
@@ -606,6 +681,12 @@ def fracture_summary(path,sheet_name,setting_fn=None):
 
 def fracture_compare_summary(path,sheet_names,setting_fn=None):
     plt.clf()
+    limits=configs()
+
+    if (limits[0]):
+        plt.xlim(limits[1])
+    if (limits[2]):
+        plt.ylim(limits[3])
 
     label_color_map = {}
     color_list = ["blue", "red", "green", "blue", "red", "green", "blue", "red", "green"]
@@ -664,6 +745,12 @@ def fracture_compare_summary(path,sheet_names,setting_fn=None):
 
 def summary(path,sheet_name,func_name,letters=False,setting_fn=None):
     plt.clf()
+    limits=configs()
+
+    if (limits[0]):
+        plt.xlim(limits[1])
+    if (limits[2]):
+        plt.ylim(limits[3])
     
     x_name,y_name,xlabel,ylabel=xy_values(func_name)
     data_frame = pd.read_excel(path,sheet_name=sheet_name,header=([0,1,2]),index_col=0)
@@ -720,6 +807,12 @@ def Normalized_plot(path,quality="Displacement"):
         row2="Force"			
 
     plt.clf()
+    limits=configs()
+
+    if (limits[0]):
+        plt.xlim(limits[1])
+    if (limits[2]):
+        plt.ylim(limits[3])
  
     rdx=[]
     ddx=[]
@@ -808,6 +901,12 @@ def Normalized_plot(path,quality="Displacement"):
 
 def fracture_compare(address,sheet_name,materials,setting_fn=None):
     plt.clf()
+    limits=configs()
+
+    if (limits[0]):
+        plt.xlim(limits[1])
+    if (limits[2]):
+        plt.ylim(limits[3])
     print(materials)
     print(sheet_name)
     address=(os.path.dirname(address))
@@ -859,6 +958,12 @@ def fracture_compare(address,sheet_name,materials,setting_fn=None):
 def yield_stress_plot(path,sheet_name,show_r=False):
     #plot the direction dependency of properties.
     plt.clf()
+    limits=configs()
+
+    if (limits[0]):
+        plt.xlim(limits[1])
+    if (limits[2]):
+        plt.ylim(limits[3])
     data_frame = pd.read_excel(path,sheet_name=sheet_name,header=([0,1,2]),index_col=0)
     tests_list = data_frame.columns.get_level_values(0).unique().tolist()     
      #assign direction to test number
@@ -1079,6 +1184,12 @@ def FDset():
 
 def FDplot(series_list):
     plt.clf()
+    limits=configs()
+
+    if (limits[0]):
+        plt.xlim(limits[1])
+    if (limits[2]):
+        plt.ylim(limits[3])
     # Iterate over each series in the list
     for series in series_list:
         # Read the Excel sheet
@@ -1111,7 +1222,8 @@ def FDplot(series_list):
         else:
             if mark_end:
                 plt.plot(x, y, label=label, color=color, linestyle=line_style, linewidth=linewidth)
-                plt.scatter(x.iloc[-1], y.iloc[-1], s=70, marker="*", color=color)
+                plt.scatter(x.iloc[-1], y.iloc[-1], s=70, marker="*", color=color) 
+                
             else:
                 plt.plot(x, y, label=label, color=color, linestyle=line_style, linewidth=linewidth)
                 
