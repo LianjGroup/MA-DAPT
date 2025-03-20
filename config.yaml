@@ -3,8 +3,8 @@ matplotlib:
     labelsize: 10
     titlesize: 16
   font:
-    family: Arial
-    size: 10
+    family: Cursive
+    size: 4
   legend:
     fontsize: 16
     'on': true
@@ -12,10 +12,10 @@ matplotlib:
     xlim:
     - 4.0
     - 2.0
-    xlim_enabled: false
+    xlim_enabled: true
     ylim:
-    - 6.0
-    - 9.0
-    ylim_enabled: false
+    - 4.0
+    - 4.0
+    ylim_enabled: true
 misc:
-  normalized: false
+  normalized: true

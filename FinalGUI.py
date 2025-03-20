@@ -29,7 +29,7 @@ class App(tk.Tk):    # Basic App blueprint. Tabs with features are added to it
     self.report_callback_exception = self.show_error
 
     try:
-#      self.iconbitmap("l.ico")
+      self.iconbitmap("final_icon.ico")
 
       self.title("Materials Analysis")    
       style = ttk.Style()                            #Use to change the style of the tabs
@@ -121,9 +121,11 @@ def obtain_materials():
 
 
 def validate_input(new_value): #Ensures only numbers can be entered
-    if new_value == "" or new_value.replace("", "1").isdigit():
-        return True
+    if new_value == "" or new_value.replace(".", "", 1).isdigit():
+      return True
     return False
+
+
 
 
 def send_to_clipboard(name):
@@ -285,145 +287,170 @@ class ImageGrid(tk.Toplevel):
 
 
 class Settings(tk.Toplevel):
-  def __init__(self, parent):
-      super().__init__(parent)
-      self.title("Settings")
-      self.geometry("500x900")
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.title("Settings")
+        self.geometry("500x700")
+        self.iconbitmap("final_icon.ico")
+        
+        notebook = ttk.Notebook(self)
+        settings_tab = ttk.Frame(notebook)
+        about_tab = ttk.Frame(notebook)
+        
+        notebook.add(settings_tab, text="Settings")
+        notebook.add(about_tab, text="About")
+        notebook.pack(expand=True, fill="both")
+        
+        # Variables
+        self.validate_numeric = self.register(validate_input)
+        self.font_family_var = tk.StringVar()
+        self.font_size_var = tk.DoubleVar()
+        
+        self.axes_labelsize_var = tk.DoubleVar()
+        self.axes_titlesize_var = tk.DoubleVar()
+        
+        self.legend_on_var = tk.BooleanVar()
+        self.legend_fontsize_var = tk.DoubleVar()
+        
+        self.normalize_var = tk.BooleanVar()
+       
+        self.xlim_min_var = tk.DoubleVar()
+        self.xlim_max_var = tk.DoubleVar()
+       
+        self.ylim_min_var = tk.DoubleVar()
+        self.ylim_max_var = tk.DoubleVar()
+       
+        self.xlim_enabled_var = tk.BooleanVar()
+        self.ylim_enabled_var = tk.BooleanVar()
 
-      # Variables
-      self.font_family_var = tk.StringVar()
-      self.font_size_var = tk.StringVar()
+        # Load settings from YAML
+        with open("config.yaml", "r") as file:
+            self.settings = yaml.safe_load(file)
 
-      self.axes_labelsize_var = tk.StringVar()
-      self.legend_on_var = tk.BooleanVar()
-      self.legend_fontsize_var = tk.StringVar()
+        # Set initial values
+        self.font_family_var.set(self.settings["matplotlib"]["font"]["family"])
+        self.font_size_var.set(str(self.settings["matplotlib"]["font"]["size"]))
+        
+        self.axes_labelsize_var.set(str(self.settings["matplotlib"]["axes"]["labelsize"]))
+        self.axes_titlesize_var.set(str(self.settings["matplotlib"]["axes"]["titlesize"]))
+        self.legend_on_var.set(self.settings["matplotlib"]["legend"]["on"])
+        self.legend_fontsize_var.set(str(self.settings["matplotlib"]["legend"]["fontsize"]))
+        
+        self.normalize_var.set(self.settings["misc"]["normalized"])
+        
+        self.xlim_enabled_var.set(self.settings["matplotlib"]["limits"]["xlim_enabled"])
+        self.ylim_enabled_var.set(self.settings["matplotlib"]["limits"]["ylim_enabled"])
+        
+        self.xlim_min_var.set(self.settings["matplotlib"]["limits"]["xlim"][0])
+        self.xlim_max_var.set(self.settings["matplotlib"]["limits"]["xlim"][1])
+        self.ylim_min_var.set(self.settings["matplotlib"]["limits"]["ylim"][0])
+        self.ylim_max_var.set(self.settings["matplotlib"]["limits"]["ylim"][1])
+
+        # Settings Layout
+        ttk.Label(settings_tab, text="Font Family:").grid(row=0, column=0, sticky="w", padx=10, pady=5)
+        font_families = ["Arial", "Times New Roman", "Cursive", "Comic Sans"]
+        ttk.Combobox(settings_tab, textvariable=self.font_family_var, values=font_families, state="readonly").grid(row=0, column=1, padx=10)
+        
+        ttk.Label(settings_tab, text="Font Size:").grid(row=1, column=0, sticky="w", padx=10, pady=5)
+        ttk.Entry(settings_tab, textvariable=self.font_size_var,validate="key", validatecommand=(self.validate_numeric, "%P")).grid(row=1, column=1, padx=10)
+
+        ttk.Label(settings_tab, text="Axes Label Size:").grid(row=2, column=0, sticky="w", padx=10, pady=5)
+        ttk.Entry(settings_tab, textvariable=self.axes_labelsize_var,validate="key", validatecommand=(self.validate_numeric, "%P")).grid(row=2, column=1, padx=10)
+
+        ttk.Label(settings_tab, text="Legend On:").grid(row=3, column=0, sticky="w", padx=10, pady=5)
+        ttk.Checkbutton(settings_tab, variable=self.legend_on_var).grid(row=3, column=1, padx=10, sticky="w")
+
+        ttk.Label(settings_tab, text="Legend Font Size:").grid(row=4, column=0, sticky="w", padx=10, pady=5)
+        ttk.Entry(settings_tab, textvariable=self.legend_fontsize_var,validate="key", validatecommand=(self.validate_numeric, "%P")).grid(row=4, column=1, padx=10)
+
+        ttk.Label(settings_tab, text="Normalization:").grid(row=6, column=0, sticky="w", padx=10, pady=5)
+        ttk.Checkbutton(settings_tab, variable=self.normalize_var).grid(row=6, column=1, padx=10, sticky="w")
+
+        ttk.Label(settings_tab, text="X Lim Min:").grid(row=7, column=0, sticky="w", padx=10, pady=5)
+        ttk.Entry(settings_tab, textvariable=self.xlim_min_var,validate="key", validatecommand=(self.validate_numeric, "%P")).grid(row=7, column=1, padx=10)
+
+        ttk.Label(settings_tab, text="X Lim Max:").grid(row=8, column=0, sticky="w", padx=10, pady=5)
+        ttk.Entry(settings_tab, textvariable=self.xlim_max_var,validate="key", validatecommand=(self.validate_numeric, "%P")).grid(row=8, column=1, padx=10)
+
+        ttk.Label(settings_tab, text="Enable X Lim:").grid(row=9, column=0, sticky="w", padx=10, pady=5)
+        ttk.Checkbutton(settings_tab, variable=self.xlim_enabled_var).grid(row=9, column=1, padx=10, sticky="w")
+
+        ttk.Label(settings_tab, text="Y Lim Min:").grid(row=10, column=0, sticky="w", padx=10, pady=5)
+        ttk.Entry(settings_tab, textvariable=self.ylim_min_var,validate="key", validatecommand=(self.validate_numeric, "%P")).grid(row=10, column=1, padx=10)
+
+        ttk.Label(settings_tab, text="Y Lim Max:").grid(row=11, column=0, sticky="w", padx=10, pady=5)
+        ttk.Entry(settings_tab, textvariable=self.ylim_max_var,validate="key", validatecommand=(self.validate_numeric, "%P")).grid(row=11, column=1, padx=10)
+
+        ttk.Label(settings_tab, text="Enable Y Lim:").grid(row=12, column=0, sticky="w", padx=10, pady=5)
+        ttk.Checkbutton(settings_tab, variable=self.ylim_enabled_var).grid(row=12, column=1, padx=10, sticky="w")
+
+        for var in self.__dict__.values():
+            if isinstance(var, (tk.StringVar, tk.DoubleVar)):
+                var.trace_add("write", self.check_entries)
 
 
-      self.axes_titlesize_var = tk.StringVar()
-
-
-      self.normalize_var = tk.BooleanVar()
-
-      self.xlim_min_var = tk.DoubleVar()
-      self.xlim_max_var = tk.DoubleVar()
-      self.ylim_min_var = tk.DoubleVar()
-      self.ylim_max_var = tk.DoubleVar()
-
-      self.xlim_enabled_var = tk.BooleanVar()
-      self.ylim_enabled_var = tk.BooleanVar()
-          
-
-      # Load settings from YAML
-      with open(f"config.yaml", "r") as file:
-          self.settings = yaml.safe_load(file)
-
-      # Set initial values
-      self.font_family_var.set(self.settings["matplotlib"]["font"]["family"])
-      self.font_size_var.set(str(self.settings["matplotlib"]["font"]["size"]))
-      self.axes_labelsize_var.set(str(self.settings["matplotlib"]["axes"]["labelsize"]))
-      self.axes_titlesize_var.set(str(self.settings["matplotlib"]["axes"]["titlesize"]))
-      self.legend_on_var.set(self.settings["matplotlib"]["legend"]["on"])
-      self.legend_fontsize_var.set(str(self.settings["matplotlib"]["legend"]["fontsize"]))
-      self.normalize_var.set(self.settings["misc"]["normalized"])
+        # About Layout
+        title_frame=ttk.Frame(about_tab)
+        icon= Image.open("final_icon.ico") 
+        photo = ImageTk.PhotoImage(icon.resize((80, 80)))
       
-      self.xlim_enabled_var.set(self.settings["matplotlib"]["limits"]["xlim_enabled"])
-      self.ylim_enabled_var.set(self.settings["matplotlib"]["limits"]["ylim_enabled"])
+        label = ttk.Label(title_frame, image=photo)
+        label.image = photo  
+        label.grid(row=0, column=0,sticky="w") 
+        ttk.Label(title_frame, text="MA-DAPT:\nMaterial Design, Analysis,\nProcessing, and Testing\n\n ", font=("TkDefaultFont", 11, "bold")).grid(row=0,column=1,sticky="w",padx=34)
 
-      self.xlim_min_var.set(self.settings["matplotlib"]["limits"]["xlim"][0])
-      self.xlim_max_var.set(self.settings["matplotlib"]["limits"]["xlim"][1])
+        title_frame.pack(padx=10,pady=10,anchor="w")
+        ttk.Label(about_tab, text="Version: 0.45", font=("TkDefaultFont", 11)).pack(pady=5,padx=5,anchor="w")
+        
+        creation = """        Created by Guijia Li and Saad Zia
+        Developed as part of the Aalto University Materials
+        to Products Department, led by Lian junhe."""
+        ttk.Label(about_tab, text=creation).pack(pady=10,anchor="w")    
 
-      self.ylim_min_var.set(self.settings["matplotlib"]["limits"]["ylim"][0])
-      self.ylim_max_var.set(self.settings["matplotlib"]["limits"]["ylim"][1])
-
-
-      # GUI Layout
-      ttk.Label(self, text="Font Family:").grid(row=1, column=0, sticky="w", padx=10,pady=20)
-      font_families = ["Arial", "Times New Roman", "Cursive","Comic Sans"]
-      ttk.Combobox(self, textvariable=self.font_family_var, values=font_families, state="readonly").grid(row=1, column=1, padx=10)
-
-      ttk.Label(self, text="Font Size:").grid(row=2, column=0, sticky="w", padx=10)
-      self.validate_numeric = self.register(validate_input)
-      ttk.Entry(self, textvariable=self.font_size_var, validate="key", validatecommand=(self.validate_numeric, "%P")).grid(row=2, column=1, padx=10)
-
-      ttk.Label(self, text="Axes Label Size:").grid(row=3, column=0, sticky="w", padx=10)
-      ttk.Entry(self, textvariable=self.axes_labelsize_var, validate="key", validatecommand=(self.validate_numeric, "%P")).grid(row=3, column=1, padx=10)
-
-      ttk.Label(self, text="Axes Title Size:").grid(row=4, column=0, sticky="w", padx=10)
-      ttk.Entry(self, textvariable=self.axes_titlesize_var, validate="key", validatecommand=(self.validate_numeric, "%P")).grid(row=4, column=1, padx=10)
-
-      ttk.Label(self, text="Legend On:").grid(row=6, column=0, sticky="w", padx=10)
-      ttk.Checkbutton(self, variable=self.legend_on_var).grid(row=6, column=1, padx=10, sticky="w")
-
-      ttk.Label(self, text="Legend Font Size:").grid(row=5, column=0, sticky="w", padx=10)
-      ttk.Entry(self, textvariable=self.legend_fontsize_var, validate="key", validatecommand=(self.validate_numeric, "%P")).grid(row=5, column=1, padx=10)
+        ttk.Label(about_tab, text="License: MIT License", font=("TkDefaultFont", 11, "bold")).pack(pady=10,padx=5,anchor="w")    
+        ttk.Label(about_tab, text="This software is open-source and provided 'as-is'\nwithout warranty of any kind, express or implied.").pack(pady=10)    
 
 
-      ttk.Label(self, text="Normalization:").grid(row=7, column=0, sticky="w", padx=10)
-      ttk.Checkbutton(self, variable=self.normalize_var).grid(row=7, column=1, padx=10, sticky="w")
 
-# X Lim Min and Max
-      ttk.Label(self, text="X Lim Min:").grid(row=8, column=0, sticky="w", padx=10)
-      ttk.Entry(self, textvariable=self.xlim_min_var, validate="key").grid(row=8, column=1, padx=10)
+        # Save Button
+        self.save_button = ttk.Button(settings_tab, text="Save", command=self.save_settings, state="enabled")
+        self.save_button.grid(row=193, column=0, columnspan=2, pady=20)
 
-      ttk.Label(self, text="X Lim Max:").grid(row=9, column=0, sticky="w", padx=10)
-      ttk.Entry(self, textvariable=self.xlim_max_var, validate="key").grid(row=9, column=1, padx=10)
+    def save_settings(self):
+        """Save the updated settings to the YAML file."""
+        self.settings["matplotlib"]["font"]["family"] = self.font_family_var.get()
+        self.settings["matplotlib"]["font"]["size"] = int(self.font_size_var.get())
+        self.settings["matplotlib"]["axes"]["labelsize"] = int(self.axes_labelsize_var.get())
+        self.settings["matplotlib"]["legend"]["on"] = self.legend_on_var.get()
+        self.settings["matplotlib"]["legend"]["fontsize"] = int(self.legend_fontsize_var.get())
+        self.settings["misc"]["normalized"] = self.normalize_var.get()
+        self.settings["matplotlib"]["limits"]["xlim_enabled"] = self.xlim_enabled_var.get()
+        self.settings["matplotlib"]["limits"]["ylim_enabled"] = self.ylim_enabled_var.get()
+        self.settings["matplotlib"]["limits"]["xlim"] = [self.xlim_min_var.get(), self.xlim_max_var.get()]
+        self.settings["matplotlib"]["limits"]["ylim"] = [self.ylim_min_var.get(), self.ylim_max_var.get()]
+        
+        self.save_yaml(self.settings)
+        print("Settings saved successfully!")
 
-      # X Lim Enabled Checkbox
-      ttk.Label(self, text="Enable X Lim:").grid(row=10, column=0, sticky="w", padx=10)
-      ttk.Checkbutton(self, variable=self.xlim_enabled_var).grid(row=10, column=1, padx=10, sticky="w")
-
-      # Y Lim Min and Max
-      ttk.Label(self, text="Y Lim Min:").grid(row=11, column=0, sticky="w", padx=10)
-      ttk.Entry(self, textvariable=self.ylim_min_var, validate="key").grid(row=11, column=1, padx=10)
-
-      ttk.Label(self, text="Y Lim Max:").grid(row=12, column=0, sticky="w", padx=10)
-      ttk.Entry(self, textvariable=self.ylim_max_var, validate="key").grid(row=12, column=1, padx=10)
-
-      # Y Lim Enabled Checkbox
-      ttk.Label(self, text="Enable Y Lim:").grid(row=13, column=0, sticky="w", padx=10)
-      ttk.Checkbutton(self, variable=self.ylim_enabled_var).grid(row=13, column=1, padx=10, sticky="w")
-
+    def save_yaml(self, data):
+        """Save data to the YAML file."""
+        with open("config.yaml", "w") as file:
+            yaml.safe_dump(data, file)
     
-      ttk.Label(self, text="About", font=("Arial", 12)).grid(row=18, column=0, columnspan=2, pady=10)
-      
-      ttk.Label(self, text="MA-DAPT is created by Guijia Li and Saad Zia\nVersion: 0.4", font=("Arial", 10)).grid(row=19, column=0, columnspan=3, pady=10,rowspan=2)
-      ttk.Label(self, text="License: MIT License\nThis software is open-source and provided 'as-is',\nwithout warranty of any kind, express or implied.", font=("Arial", 10)).grid(row=21, column=0, columnspan=3, pady=10,rowspan=3)
-    
-      # Save Button
-      ttk.Button(self, text="Save", command=self.save_settings).grid(row=28, column=0, pady=20)
+    def check_entries(self, *args):
+        for var in self.__dict__.values():
+            if isinstance(var, (tk.StringVar, tk.DoubleVar)):
+                try:
+                    value = str(var.get()).strip()
+                    print(value)
+                    if value == "" or value == "."or value == "0.0":
+                        self.save_button.config(state="disabled")
+                        return
+                except (ValueError, tk.TclError):
+                    self.save_button.config(state="disabled")
+                    return
+        self.save_button.config(state="normal")
 
- 
-
-  def save_settings(self):
-      """Save the updated settings to the YAML file."""
-      self.settings["matplotlib"]["font"]["family"] = self.font_family_var.get()
-      self.settings["matplotlib"]["font"]["size"] = int(self.font_size_var.get())
-      self.settings["matplotlib"]["axes"]["labelsize"] = int(self.axes_labelsize_var.get())
-      self.settings["matplotlib"]["axes"]["titlesize"] = int(self.axes_titlesize_var.get())
-      self.settings["matplotlib"]["legend"]["on"] = self.legend_on_var.get()
-      self.settings["matplotlib"]["legend"]["fontsize"] = int(self.legend_fontsize_var.get())
-      self.settings["misc"]["normalized"]= self.normalize_var.get()
-
-
-      self.settings["matplotlib"]["limits"]["xlim"] = [
-          self.xlim_min_var.get(), self.xlim_max_var.get()]
-  
-      self.settings["matplotlib"]["limits"]["ylim"] = [
-          self.ylim_min_var.get(), self.ylim_max_var.get()]
-      
-      self.settings["matplotlib"]["limits"]["xlim_enabled"] = self.xlim_enabled_var.get()
-
-      self.settings["matplotlib"]["limits"]["ylim_enabled"] = self.ylim_enabled_var.get()
-
-      
-      self.save_yaml(self.settings)
-      print("Settings saved successfully!")
-      im.configs()
-
-  def save_yaml(self, data):
-      """Save data to the YAML file."""
-      with open(f"config.yaml", "w") as file:
-          yaml.safe_dump(data, file)
 
 
 
@@ -1250,3 +1277,4 @@ def main():
 
 if __name__ == "__main__":
   main()
+
