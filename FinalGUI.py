@@ -849,8 +849,8 @@ class FracTab(ttk.Frame):
         print(self.selected_calc_mat.get())
         path = f"{Excel_raw}{os.sep}{self.selected_calc_mat.get()}.xlsx"
         all_sheets = pd.ExcelFile(path).sheet_names
-        filtered_sheets = [sheet for sheet in all_sheets if "SDB" not in sheet and "Tests" not in sheet]
-        #filtered_sheets = [sheet for sheet in all_sheets if "Tests" not in sheet]
+       # filtered_sheets = [sheet for sheet in all_sheets if "SDB" not in sheet and "Tests" not in sheet]
+        filtered_sheets = [sheet for sheet in all_sheets if "Tests" not in sheet]
        
         sheet_list = list(filtered_sheets)
         self.checkbox_vars = {}
