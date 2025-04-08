@@ -443,7 +443,7 @@ class Settings(tk.Toplevel):
                 try:
                     value = str(var.get()).strip()
                     print(value)
-                    if value == "" or value == "."or value == "0.0":
+                    if value == "" or value == ".":
                         self.save_button.config(state="disabled")
                         return
                 except (ValueError, tk.TclError):
