@@ -19,13 +19,7 @@ def configs():
         config = yaml.full_load(file)
 
 
-    plt.rcParams.update({
-        "font.family": config["matplotlib"]["font"]["family"],
-        "font.size": config["matplotlib"]["font"]["size"],
-        "axes.labelsize": config["matplotlib"]["font"]["size"],
-        "axes.titlesize": config["matplotlib"]["font"]["size"],
-        "legend.fontsize": config["matplotlib"]["font"]["size"]
-    })
+
     global legend_on,normalized,excel_raw,excel_processed
     legend_on=config["matplotlib"]["legend"]["on"]
     normalized=config["misc"]["normalized"]
@@ -36,7 +30,13 @@ def configs():
 
     yls=(config["matplotlib"]["limits"]["ylim"]) 
 
-
+    plt.rcParams.update({
+        "font.family": config["matplotlib"]["font"]["family"],
+        "font.size": config["matplotlib"]["font"]["size"],
+        "axes.labelsize": config["matplotlib"]["font"]["size"],
+        "axes.titlesize": config["matplotlib"]["font"]["size"],
+        "legend.fontsize": config["matplotlib"]["font"]["size"]
+    })
     lims=[xcheck,xls,ycheck,yls]
  
  

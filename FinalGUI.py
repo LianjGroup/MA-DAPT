@@ -52,8 +52,7 @@ class App(tk.Tk):    # Basic App blueprint. Tabs with features are added to it
       def cause_error():
           raise RuntimeError("money!")
 
-      btn = tk.Button(self, text="This is an easter egg I'm too lazy to remove", command=cause_error)
-      btn.pack(pady=20)
+ 
 
 
       # All tabs. Get sent proper materials
@@ -262,6 +261,9 @@ class ImageGrid(tk.Toplevel):
 
   def save_image(self, img,location=False,clipboard=False):
     if location:
+      if not os.path.exists("Saved"):
+          os.makedirs("Saved", exist_ok=True)
+
       save_path = f"Saved{os.sep}Graph.png"
       base, ext = os.path.splitext(save_path)
       counter = 1
@@ -328,61 +330,93 @@ class Settings(tk.Toplevel):
             self.settings = yaml.safe_load(file)
 
         # Set initial values
-        self.font_family_var.set(self.settings["matplotlib"]["font"]["family"])
-        self.font_size_var.set(str(self.settings["matplotlib"]["font"]["size"]))
-        
-        self.axes_labelsize_var.set(str(self.settings["matplotlib"]["axes"]["labelsize"]))
-        self.axes_titlesize_var.set(str(self.settings["matplotlib"]["axes"]["titlesize"]))
-        self.legend_on_var.set(self.settings["matplotlib"]["legend"]["on"])
-        self.legend_fontsize_var.set(str(self.settings["matplotlib"]["legend"]["fontsize"]))
-        
-        self.normalize_var.set(self.settings["misc"]["normalized"])
-        
-        self.xlim_enabled_var.set(self.settings["matplotlib"]["limits"]["xlim_enabled"])
-        self.ylim_enabled_var.set(self.settings["matplotlib"]["limits"]["ylim_enabled"])
-        
-        self.xlim_min_var.set(self.settings["matplotlib"]["limits"]["xlim"][0])
-        self.xlim_max_var.set(self.settings["matplotlib"]["limits"]["xlim"][1])
-        self.ylim_min_var.set(self.settings["matplotlib"]["limits"]["ylim"][0])
-        self.ylim_max_var.set(self.settings["matplotlib"]["limits"]["ylim"][1])
+        self.font_family_var.set(
+            self.settings.get("matplotlib", {}).get("font", {}).get("family", "Arial"))
+        self.font_size_var.set(
+            str(self.settings.get("matplotlib", {}).get("font", {}).get("size", 12)))
+
+        self.axes_labelsize_var.set(
+            str(self.settings.get("matplotlib", {}).get("axes", {}).get("labelsize", 10)))
+        self.axes_titlesize_var.set(
+            str(self.settings.get("matplotlib", {}).get("axes", {}).get("titlesize", 12)))
+
+        self.legend_on_var.set(
+            self.settings.get("matplotlib", {}).get("legend", {}).get("on", False))
+        self.legend_fontsize_var.set(
+            str(self.settings.get("matplotlib", {}).get("legend", {}).get("fontsize", 10)))
+
+        self.normalize_var.set(
+            self.settings.get("misc", {}).get("normalized", False))
+
+        self.xlim_enabled_var.set(
+            self.settings.get("matplotlib", {}).get("limits", {}).get("xlim_enabled", False))
+        self.ylim_enabled_var.set(
+            self.settings.get("matplotlib", {}).get("limits", {}).get("ylim_enabled", False))
+
+        self.xlim_min_var.set(
+            self.settings.get("matplotlib", {}).get("limits", {}).get("xlim", [0, 1])[0])
+        self.xlim_max_var.set(
+            self.settings.get("matplotlib", {}).get("limits", {}).get("xlim", [0, 1])[1])
+
+        self.ylim_min_var.set(
+            self.settings.get("matplotlib", {}).get("limits", {}).get("ylim", [0, 1])[0])
+        self.ylim_max_var.set(
+            self.settings.get("matplotlib", {}).get("limits", {}).get("ylim", [0, 1])[1])
 
         # Settings Layout
-        ttk.Label(settings_tab, text="Font Family:").grid(row=0, column=0, sticky="w", padx=10, pady=5)
-        font_families = ["Arial", "Times New Roman", "Cursive", "Comic Sans"]
-        ttk.Combobox(settings_tab, textvariable=self.font_family_var, values=font_families, state="readonly").grid(row=0, column=1, padx=10)
+
+        label_frame = ttk.Frame(settings_tab)
+        label_frame.pack(side='left',anchor='n', pady=7)
         
-        ttk.Label(settings_tab, text="Font Size:").grid(row=1, column=0, sticky="w", padx=10, pady=5)
-        ttk.Entry(settings_tab, textvariable=self.font_size_var,validate="key", validatecommand=(self.validate_numeric, "%P")).grid(row=1, column=1, padx=10)
+        option_frame = ttk.Frame(settings_tab)
+        option_frame.pack(side='left',anchor='n', pady=7)
 
-        ttk.Label(settings_tab, text="Axes Label Size:").grid(row=2, column=0, sticky="w", padx=10, pady=5)
-        ttk.Entry(settings_tab, textvariable=self.axes_labelsize_var,validate="key", validatecommand=(self.validate_numeric, "%P")).grid(row=2, column=1, padx=10)
 
-        ttk.Label(settings_tab, text="Legend On:").grid(row=3, column=0, sticky="w", padx=10, pady=5)
-        ttk.Checkbutton(settings_tab, variable=self.legend_on_var).grid(row=3, column=1, padx=10, sticky="w")
 
-        ttk.Label(settings_tab, text="Legend Font Size:").grid(row=4, column=0, sticky="w", padx=10, pady=5)
-        ttk.Entry(settings_tab, textvariable=self.legend_fontsize_var,validate="key", validatecommand=(self.validate_numeric, "%P")).grid(row=4, column=1, padx=10)
+        ttk.Label(label_frame, text="Font Family:").pack(padx=10, pady=5, anchor='n')
+        font_families = ["Arial", "Times New Roman", "Cursive", "Comic Sans"]
+        ttk.Combobox(option_frame, textvariable=self.font_family_var, 
+          values=font_families, state="readonly").pack(padx=10, pady=5, anchor='n')
 
-        ttk.Label(settings_tab, text="Normalization:").grid(row=6, column=0, sticky="w", padx=10, pady=5)
-        ttk.Checkbutton(settings_tab, variable=self.normalize_var).grid(row=6, column=1, padx=10, sticky="w")
+        ttk.Label(label_frame, text="Font Size:").pack(padx=10, pady=5, anchor='n')
+        ttk.Entry(option_frame, textvariable=self.font_size_var, 
+          validate="key", validatecommand=(self.validate_numeric, "%P")).pack(padx=10, pady=5, anchor='n')
 
-        ttk.Label(settings_tab, text="X Lim Min:").grid(row=7, column=0, sticky="w", padx=10, pady=5)
-        ttk.Entry(settings_tab, textvariable=self.xlim_min_var,validate="key", validatecommand=(self.validate_numeric, "%P")).grid(row=7, column=1, padx=10)
+        ttk.Label(label_frame, text="Axes Label Size:").pack(padx=10, pady=5, anchor='n')
+        ttk.Entry(option_frame, textvariable=self.axes_labelsize_var, 
+          validate="key", validatecommand=(self.validate_numeric, "%P")).pack(padx=10, pady=5, anchor='n')
 
-        ttk.Label(settings_tab, text="X Lim Max:").grid(row=8, column=0, sticky="w", padx=10, pady=5)
-        ttk.Entry(settings_tab, textvariable=self.xlim_max_var,validate="key", validatecommand=(self.validate_numeric, "%P")).grid(row=8, column=1, padx=10)
+        ttk.Label(label_frame, text="Legend On:").pack(padx=10, pady=5, anchor='n')
+        ttk.Checkbutton(option_frame, variable=self.legend_on_var).pack(padx=10, pady=5, anchor='n')
 
-        ttk.Label(settings_tab, text="Enable X Lim:").grid(row=9, column=0, sticky="w", padx=10, pady=5)
-        ttk.Checkbutton(settings_tab, variable=self.xlim_enabled_var).grid(row=9, column=1, padx=10, sticky="w")
+        ttk.Label(label_frame, text="Legend Font Size:").pack(padx=10, pady=5, anchor='n')
+        ttk.Entry(option_frame, textvariable=self.legend_fontsize_var, 
+          validate="key", validatecommand=(self.validate_numeric, "%P")).pack(padx=10, pady=5, anchor='n')
 
-        ttk.Label(settings_tab, text="Y Lim Min:").grid(row=10, column=0, sticky="w", padx=10, pady=5)
-        ttk.Entry(settings_tab, textvariable=self.ylim_min_var,validate="key", validatecommand=(self.validate_numeric, "%P")).grid(row=10, column=1, padx=10)
+        ttk.Label(label_frame, text="Normalization:").pack(padx=10, pady=5, anchor='n')
+        ttk.Checkbutton(option_frame, variable=self.normalize_var).pack(padx=10, pady=5, anchor='n')
+        
+        ttk.Label(label_frame, text="X Lim Min:").pack(padx=10, pady=5, anchor='n')
+        ttk.Entry(option_frame, textvariable=self.xlim_min_var, 
+          validate="key", validatecommand=(self.validate_numeric, "%P")).pack(padx=10, pady=5, anchor='n')
 
-        ttk.Label(settings_tab, text="Y Lim Max:").grid(row=11, column=0, sticky="w", padx=10, pady=5)
-        ttk.Entry(settings_tab, textvariable=self.ylim_max_var,validate="key", validatecommand=(self.validate_numeric, "%P")).grid(row=11, column=1, padx=10)
+        ttk.Label(label_frame, text="X Lim Max:").pack(padx=10, pady=5, anchor='n')
+        ttk.Entry(option_frame, textvariable=self.xlim_max_var, 
+          validate="key", validatecommand=(self.validate_numeric, "%P")).pack(padx=10, pady=5, anchor='n')
 
-        ttk.Label(settings_tab, text="Enable Y Lim:").grid(row=12, column=0, sticky="w", padx=10, pady=5)
-        ttk.Checkbutton(settings_tab, variable=self.ylim_enabled_var).grid(row=12, column=1, padx=10, sticky="w")
+        ttk.Label(label_frame, text="Enable X Lim:").pack(padx=10, pady=5, anchor='n')
+        ttk.Checkbutton(option_frame, variable=self.xlim_enabled_var).pack(padx=10, pady=5, anchor='n')
+
+        ttk.Label(label_frame, text="Y Lim Min:").pack(padx=10, pady=5, anchor='n')
+        ttk.Entry(option_frame, textvariable=self.ylim_min_var, 
+          validate="key", validatecommand=(self.validate_numeric, "%P")).pack(padx=10, pady=5, anchor='n')
+
+        ttk.Label(label_frame, text="Y Lim Max:").pack(padx=10, pady=5, anchor='n')
+        ttk.Entry(option_frame, textvariable=self.ylim_max_var, 
+          validate="key", validatecommand=(self.validate_numeric, "%P")).pack(padx=10, pady=5, anchor='n')
+
+        ttk.Label(label_frame, text="Enable Y Lim:").pack(padx=10, pady=5, anchor='n')
+        ttk.Checkbutton(option_frame, variable=self.ylim_enabled_var).pack(padx=10, pady=5, anchor='n')
 
         for var in self.__dict__.values():
             if isinstance(var, (tk.StringVar, tk.DoubleVar)):
@@ -412,9 +446,9 @@ class Settings(tk.Toplevel):
 
 
 
-        # Save Button
-        self.save_button = ttk.Button(settings_tab, text="Save", command=self.save_settings, state="enabled")
-        self.save_button.grid(row=193, column=0, columnspan=2, pady=20)
+        #Save Button
+        self.save_button = ttk.Button(label_frame, text="Save", command=self.save_settings, state="enabled")
+        self.save_button.pack()
 
     def save_settings(self):
         """Save the updated settings to the YAML file."""
@@ -916,9 +950,9 @@ class FracTab(ttk.Frame):
           buffer.add_photo(im.Normalized_plot(path,quality))
           ImageGrid(self,buffer)
 
-# Give better names
 
-        button_frame = ttk.Frame(right_frame)
+
+        button_frame = ttk.Frame(right_frame)  # Give better names
         button_frame.pack(padx=50, pady=5)
 
         confirm_button = ttk.Button(button_frame, text="Confirm", command=lambda: frac_calculate(path, get_selected()))           
@@ -1272,7 +1306,8 @@ class AnisTab(ttk.Frame):
 
 def main(): 
   ctypes.windll.shcore.SetProcessDpiAwareness(1) # Fix scaling so text isn't blurry on windows. Test on other devices
-  App()
+  App().mainloop()
+
 
 
 if __name__ == "__main__":
