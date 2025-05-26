@@ -19,7 +19,7 @@ MA-DAPT is a powerful yet user-friendly application designed to visualize tensil
 
 1. Install python and all needed modules:
 ```Bash
-pip install tkinter pandas pillow pyyaml matplotlib numpy scipy
+pip install -r requirements.txt
 ```
 2. Download and extract source code
 3. Open folder in code editor
@@ -30,4 +30,5 @@ pip install pyinstaller
 pyinstaller --onefile --windowed FinalGUI.py
 ```
 NOTE: Release will be in Dist folder. The config file and data banks need to be moved manually.
- 
+
+
