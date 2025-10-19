@@ -17,14 +17,15 @@ MA-DAPT is a powerful yet user-friendly application designed to visualize tensil
 🍏🐧 Mac & Linux: Builds must be created manually.  
 ### Building instructions
 
-1. Install python and all needed modules:
+1. Install python 
+2. Run this to install all needed modules
 ```Bash
 pip install -r requirements.txt
 ```
-2. Download and extract source code
-3. Open folder in code editor
+3. Download and extract source code
+4. Open folder in code editor
    
-4. Build executable:
+5. Build executable:
 ```bash  
 pip install pyinstaller
 pyinstaller --onefile --windowed FinalGUI.py
