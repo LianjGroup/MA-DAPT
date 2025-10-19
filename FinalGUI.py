@@ -36,8 +36,8 @@ class App(tk.Tk):    # Basic App blueprint. Tabs with features are added to it
       style.configure("Notebook.Tab", padding=[20,0,20,0])  
     
       self.notebook = ttk.Notebook()
-      self.geometry("700x600")
-      self.minsize(700, 600)  
+      self.geometry("700x700")
+      self.minsize(700, 700)  
       self.notebook.pack(fill="both", expand=True)
 
       material_result=obtain_materials()
@@ -57,6 +57,10 @@ class App(tk.Tk):    # Basic App blueprint. Tabs with features are added to it
 
       # All tabs. Get sent proper materials
       
+
+#      self.simul_tab=SimulationTab(self,self.notebook,material_result[3],self.buffer) 
+      self.ref_tab = RefTab(self,self.notebook,material_result[1],self.buffer)
+
       self.plas_tab = PlasTab(self,self.notebook,material_result[2],self.buffer) 
       
       self.ani_tab =  AnisTab(self,self.notebook,material_result[2],self.buffer) 
@@ -65,6 +69,10 @@ class App(tk.Tk):    # Basic App blueprint. Tabs with features are added to it
       
       self.frac_tab = FracTab(self,self.notebook,material_result[1],self.buffer)
       self.calc_tab = CalcTab(self,self.notebook,material_result[1])
+
+
+
+
       self.mainloop() 
     except Exception as e:
         self.show_error(type(e), e, e.__traceback__)
@@ -106,17 +114,19 @@ class BufferStorage:
 
 # Misc functions
 def address():
-  return ("Excel_raw","Excel_processed")
+  return ("Excel_raw","Excel_processed","Excel_modeling")
 
 def obtain_materials():
-    Excel_raw,Excel_processed=address()
+    Excel_raw,Excel_processed,Excel_modeling=address()
     
     materials_raw = [os.path.splitext(f)[0] for f in os.listdir(Excel_raw) if f.endswith((".xlsx", ".xls"))]
     materials_processed = [os.path.splitext(f)[0] for f in os.listdir(Excel_processed) if f.endswith((".xlsx", ".xls"))]
+    materials_modeling = [os.path.splitext(f)[0] for f in os.listdir(Excel_modeling) if f.endswith((".xlsx", ".xls"))]
+    
     if not materials_raw or not materials_processed:
-        return False,materials_raw,materials_processed
+        return False,materials_raw,materials_processed,materials_modeling
     else:
-        return True,materials_raw,materials_processed
+        return True,materials_raw,materials_processed,materials_modeling
 
 
 def validate_input(new_value): #Ensures only numbers can be entered
@@ -664,10 +674,10 @@ class PlasTab(ttk.Frame):
     
 
     properties_frame=ttk.Frame(self)
-    properties_frame.pack(side="left",padx=15,expand=True,fill="both",anchor="n")
+    properties_frame.pack(side="left",padx=15,expand=True,anchor="n")
 
 
-    prop_title = ttk.Label(properties_frame, text="Graph", font=("Arial", 15))
+    prop_title = ttk.Label(properties_frame, text="Graphs", font=("Arial", 15))
     prop_title.pack(pady=20)
 
     prop_separator = ttk.Separator(properties_frame, orient="horizontal")
@@ -874,7 +884,7 @@ class FracTab(ttk.Frame):
 
 
 
-    def frac_repeat():        #Add list for eveyr selected matertial
+    def frac_repeat():        #Add list for every selected matertial
         for widget in right_frame.winfo_children():
           widget.pack_forget()
       
@@ -1055,7 +1065,7 @@ class CompTab(ttk.Frame):
      
 
     properties_frame=ttk.Frame(self)
-    properties_frame.pack(side="left",padx=15,expand=True,fill="both",anchor="ne")
+    properties_frame.pack(side="left",padx=15,expand=True,anchor="n")
 
 
 
@@ -1073,7 +1083,7 @@ class CompTab(ttk.Frame):
       var = tk.BooleanVar(value=False)   
       chk = ttk.Checkbutton(properties_frame, text=prop, variable=var,command=validate)
       self.property_vars[prop] = var
-      chk.pack(anchor="s", pady=2) 
+      chk.pack(anchor="w", pady=2) 
 
 
   
@@ -1084,11 +1094,11 @@ class CompTab(ttk.Frame):
 
 
     compare_button_RD=ttk.Button(properties_frame,text="Compare RD",command=lambda :compare_caller("RD"),state=tk.DISABLED)
-    compare_button_RD.pack(pady=10)  
+    compare_button_RD.pack(pady=5)  
     compare_button_TD=ttk.Button(properties_frame,text="Compare TD",command=lambda :compare_caller("DD"),state=tk.DISABLED)
-    compare_button_TD.pack(pady=10)  
+    compare_button_TD.pack(pady=5)  
     compare_button_DD=ttk.Button(properties_frame,text="Compare DD",command=lambda :compare_caller("TD"),state=tk.DISABLED)
-    compare_button_DD.pack(pady=10)  
+    compare_button_DD.pack(pady=5)  
 
 
 
@@ -1182,7 +1192,7 @@ class AnisTab(ttk.Frame):
 
     # Fills horizontally
 
-    prop_title = ttk.Label(properties_frame, text="Graph", font=("Arial", 15))
+    prop_title = ttk.Label(properties_frame, text="Graphs", font=("Arial", 15))
     prop_title.pack(pady=5,anchor="n",side="top")
 
     prop_separator = ttk.Separator(properties_frame, orient="horizontal")
@@ -1228,6 +1238,159 @@ class AnisTab(ttk.Frame):
 
 
 
+
+class SimulationTab(ttk.Frame):
+  def __init__(self,parent, notebook,materials,buffer):
+    super().__init__(parent)
+
+
+    def validate():
+      selected_dirs = [dir for dir, var in self.direction_vars.items() if var.get()]
+      selected_specs=[]
+      try:
+        selected_specs = [specs for specs, var in self.checkbox_vars.items() if var.get()]
+      except:
+        pass
+      if selected_dirs and selected_specs:
+          simulation_check_button.config(state="normal")
+      else:
+          print(selected_specs)
+          simulation_check_button.config(state="disabled")
+
+
+ 
+
+
+      
+    notebook.add(self, text="Comparasion")
+
+    mat_title = ttk.Label(self, text="Materials", font=("Arial", 15))
+    mat_title.pack(pady=20,anchor="nw",padx=37)
+
+    canvas=tk.Canvas(self, 
+                     scrollregion=(0,0,0,len(materials)*33),
+                     width=10,
+                     highlightthickness=0)
+    canvas.pack(side="left",expand=True,fill="both")
+
+
+
+    left_frame=ttk.Frame(canvas)
+    canvas.create_window((20,20), window=left_frame, anchor="nw")
+ 
+ 
+
+    self.selected_mat = tk.StringVar(value="")
+
+
+    properties_frame=ttk.Frame(self)
+    properties_frame.pack(side="left",anchor="n", fill="y")
+    properties_frame.columnconfigure(0, weight=1)
+    properties_frame.columnconfigure(1, weight=1)
+
+    dir_title = ttk.Label(properties_frame, text="Direction", font=("Arial", 12),anchor="e")
+    dir_title.grid(row=0,column=1,pady=20)
+
+    direction_frame=ttk.Frame(properties_frame)
+    direction_frame.grid(row=1,column=1, sticky="nw")
+    other_frame=ttk.Frame(properties_frame)
+    other_frame.grid(row=1,column=0, sticky="nsew")
+
+  
+
+    direction = ["RD", "DD", "TD"] 
+    self.direction_vars = {}
+    for dir in (direction):
+      var = tk.BooleanVar(value=False)   
+      chk = ttk.Checkbutton(direction_frame, text=dir, variable=var,command=validate)
+      self.direction_vars[dir] = var
+      chk.pack(anchor="w", pady=2) 
+
+    config_separator = ttk.Separator(other_frame, orient="horizontal")
+    config_separator.pack(pady=1)
+    def sheet_shower():
+      for widget in other_frame.winfo_children():
+        widget.pack_forget()
+      spec_title = ttk.Label(properties_frame, text="Specimen", font=("Arial", 12),anchor="center")
+      spec_title.grid(row=0,column=0,pady=20)
+
+      # config_separator = ttk.Separator(properties_frame, orient="horizontal")
+      # config_separator.pack(pady=1)
+
+
+      Excel_modeling=address()[2]
+      path = f"{Excel_modeling}{os.sep}{self.selected_mat.get()}.xlsx"
+      all_sheets = pd.ExcelFile(path).sheet_names
+      filtered_sheets = [sheet for sheet in all_sheets if "Tests" not in sheet]
+      sheet_list = list(filtered_sheets)
+      self.checkbox_vars = {}
+      for header in sheet_list:
+        var = tk.BooleanVar(value=False)
+        checkbox = ttk.Checkbutton(other_frame, text=header, variable=var,command=validate)
+        self.checkbox_vars[header] = var
+        checkbox.pack(anchor="center", pady=2,padx=50)
+
+
+    def sender():
+        selected_dirs = [dir for dir, var in self.direction_vars.items() if var.get()]
+        selected_specs = [specs for specs, var in self.checkbox_vars.items() if var.get()]
+        path = f"{address()[2]}{os.sep}{self.selected_mat.get()}.xlsx"
+
+
+        bufs=im.modeling_simulation_check(path, selected_dirs,selected_specs)
+  
+        for b in bufs:
+          buffer.add_photo(b.getvalue())
+        #buffer.add_photo(im.repeatablity(path,"Sheet1",p))
+        ImageGrid(self,buffer) # type: ignore
+
+
+    simulation_check_button=ttk.Button(direction_frame,text="Check Simulation",command=sender,state=tk.DISABLED)
+    simulation_check_button.pack(pady=5)  
+
+    
+
+    for material in (materials):
+      radio = ttk.Radiobutton(left_frame, 
+                              text=material,
+                              value=material,
+                              variable=self.selected_mat,
+                              command=sheet_shower)
+      radio.pack(anchor="sw",pady=3)
+
+    settings_button = ttk.Button(left_frame, text="Settings", command=lambda:Settings(self))
+    settings_button.pack(pady=30)
+   
+
+
+
+    # Fills horizontally
+
+
+  
+
+    # all_sheets = pd.ExcelFile(path).sheet_names
+    #  filtered_sheets = [sheet for sheet in all_sheets if "SDB" not in sheet and "Tests" not in sheet]
+    # filtered_sheets = [sheet for sheet in all_sheets if "Tests" not in sheet]
+    
+    # sheet_list = list(filtered_sheets)
+    # self.checkbox_vars = {}
+    # for header in sheet_list:
+    #   var = tk.BooleanVar(value=False)
+    #   checkbox = ttk.Checkbutton(right_frame, text=header, variable=var)
+    #   self.checkbox_vars[header] = var
+    #   checkbox.pack(anchor="center", pady=2,padx=50)
+
+
+
+
+
+
+
+
+    scrollbar=ttk.Scrollbar(self,orient="vertical",command=canvas.yview)
+    scrollbar.pack(side="right", fill="y")
+    canvas.configure(yscrollcommand=scrollbar.set)
 
 
 # class PlasTab2(ttk.Frame):
@@ -1301,11 +1464,113 @@ class AnisTab(ttk.Frame):
 #     scrollbar.pack(side="right", fill="y")
 #     canvas.configure(yscrollcommand=scrollbar.set)
 
+class RefTab(ttk.Frame):
+    def __init__(self, parent, notebook, materials, buffer):
+        super().__init__(parent)
+        
 
+        def remove_duplicates():  # two of the same angles cant be selected
+            angle1 = self.angle1_var.get()
+            angle2 = self.angle2_var.get()
+            
+            if angle1 and angle2 and angle1 == angle2:
+                if self.angle1_var.get() == angle1:  
+                    self.angle2_var.set("")
+                else:  
+                    self.angle1_var.set("")
+            
+            update_button_state()
+
+        def update_button_state():
+            material_selected = bool(self.selected_mat.get())  
+            angles_selected = bool(self.angle1_var.get() and self.angle2_var.get())
+            if material_selected and angles_selected:
+                self.ref_button.config(state="normal")
+            else:
+                self.ref_button.config(state="disabled")
+
+        def print_selection():
+            selected_material = self.selected_mat.get()
+            path = f"{address()[1]}{os.sep}{selected_material}_SDB.xlsx"
+            
+            print(path)
+            angle1 = self.angle1_var.get()
+            angle2 = self.angle2_var.get()
+            
+            buffer.add_photo(im.equiv_calc(path, angle1, angle2))
+            ImageGrid(self, buffer)
+
+        # Now create the UI elements
+        notebook.add(self, text="Reference")
+
+        mat_title = ttk.Label(self, text="Materials", font=("Arial", 15))
+        mat_title.pack(pady=20, anchor="nw", padx=37)
+
+        canvas = tk.Canvas(self, 
+                          scrollregion=(0, 0, 0, len(materials)*33),
+                          width=10,
+                          highlightthickness=0)
+        canvas.pack(side="left", expand=True, fill="both")
+        
+        left_frame = ttk.Frame(canvas)
+        canvas.create_window((20, 20), window=left_frame, anchor="nw")
  
+        self.selected_mat = tk.StringVar(value="")  # This will store the selected material
+        self.material_vars = {}  # Not needed anymore for radio button functionality
+        
+        for idx, material in enumerate(materials):
+            # Use the same StringVar for all radio buttons in the material group
+            chk = ttk.Radiobutton(left_frame, text=material, variable=self.selected_mat,
+                                 value=material, command=update_button_state)
+            chk.grid(row=idx+1, column=0, sticky="w")
 
+        ang1_frame = ttk.Frame(self)
+        ang1_frame.pack(side="left", expand=True, anchor="n")
+
+        ang1_title = ttk.Label(ang1_frame, text="Reference Angle", font=("Arial", 15), anchor="w")
+        ang1_title.pack(pady=20)
+
+        ang1_separator = ttk.Separator(ang1_frame, orient="horizontal")
+        ang1_separator.pack(pady=1)  
+
+        angs1 = ["RD", "DD", "TD"] 
+        self.angle1_var = tk.StringVar(value="")  
+        self.angle1_buttons = {}
+        
+        for prop in angs1:
+            btn = ttk.Radiobutton(ang1_frame, text=prop, variable=self.angle1_var, 
+                                 value=prop, command=remove_duplicates)
+            self.angle1_buttons[prop] = btn
+            btn.pack(anchor="w", pady=2) 
+
+        ang2_frame = ttk.Frame(self)
+        ang2_frame.pack(side="left", padx=5, anchor="n")
+
+        ang2_title = ttk.Label(ang2_frame, text="Raw Angle", font=("Arial", 15), anchor="w")
+        ang2_title.pack(pady=20)
+
+        ang2_separator = ttk.Separator(ang2_frame, orient="horizontal")
+        ang2_separator.pack(pady=1)  
+
+        angs2 = ["RD", "DD", "TD"] 
+        self.angle2_var = tk.StringVar(value="")  
+        self.angle2_buttons = {}
+        
+        for prop in angs2:
+            btn = ttk.Radiobutton(ang2_frame, text=prop, variable=self.angle2_var, 
+                                 value=prop, command=remove_duplicates)
+            self.angle2_buttons[prop] = btn
+            btn.pack(anchor="w", pady=2) 
+
+        self.ref_button = ttk.Button(ang2_frame, text="Work equiv", 
+                                      command=print_selection, state="disabled")
+        self.ref_button.pack(side="bottom", pady=20)
+
+        scrollbar = ttk.Scrollbar(self, orient="vertical", command=canvas.yview)
+        scrollbar.pack(side="right", fill="y")
+        canvas.configure(yscrollcommand=scrollbar.set)
 def main(): 
-  ctypes.windll.shcore.SetProcessDpiAwareness(1) # Fix scaling so text isn't blurry on windows. Test on other devices
+  ctypes.windll.shcore.SetProcessDpiAwareness(1) # Fix scaling   so text isn't blurry on windows. Test on other devices
   App().mainloop()
 
 

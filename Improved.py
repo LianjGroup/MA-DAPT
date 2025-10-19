@@ -281,10 +281,9 @@ def calculation(path,sheet_name,stress_limit=500,modified=False):
         data_frame.loc[0,(test_name,"Calculation","Young's modulus")] = Young_Modulus
 
 
-        #return 0
+ 
     
-    
-    data_frame.to_excel(f"Excel_processed{os.sep}11{sheet_name}.xlsx")
+    data_frame.to_excel(f"Excel_processed{os.sep}{sheet_name}.xlsx")
 
 
 def get_max_E(path,sheet_name,stress_limit=500):
@@ -336,7 +335,7 @@ def get_max_E(path,sheet_name,stress_limit=500):
 
  
 
- ############
+ 
 
 def rvalue(path,sheet_name):
     data_frame = pd.read_excel(path,sheet_name=sheet_name,header=([0,1,2]),index_col=0)
@@ -735,7 +734,46 @@ def fracture_compare_summary(path,sheet_names,setting_fn=None):
     
 
 
+def modeling_simulation_check(path,directions,specs):
+    buffers=[]
 
+    def simulation_check(path,shape,direction):
+        one_mm=f"{direction}"
+        two_mm = f"{direction}"
+        series = [
+
+        {"path":path, 'sheetname': shape, "mainID":two_mm,"x_name": 'Disp-1', 'y_name': 'Force-1', 'label': None,"color":"red","mark_end":True},
+        {"path":path, 'sheetname':shape, "mainID":two_mm,"x_name": 'Disp-2', 'y_name': 'Force-2', 'label': None,"color":"black","mark_end":True},
+        {"path":path, 'sheetname':shape, "mainID":two_mm,"x_name": 'Disp-3', 'y_name': 'Force-3', 'label': None,"color":"y","linestyle":'--',"mark_end":True},
+        {"path":path, 'sheetname':shape, "mainID":two_mm,"x_name": 'Disp-sim1', 'y_name': 'Force-sim1', 'label': None,"color":"b","linestyle":'--',"mark_end":False},
+        # {"path":path, 'sheetname':shape, "mainID":two_mm,"x_name": 'Disp-sim2', 'y_name': 'Force-sim2', 'label': None,"color":"b","linestyle":'--',"mark_end":False},
+    ]
+        FDplot(series)
+        plt.title(f"{shape}-{direction}")
+        plt.ylim([0,16])
+
+
+        plt.show()
+        buffer = BytesIO()
+        plt.savefig(buffer, format="PNG", bbox_inches="tight")
+        buffer.seek(0)  # Reset buffer's position to the start
+        return buffer
+
+
+    def batch_simulation_check(path, shapes, directions):
+        for shape in shapes:
+            for direction in directions:
+                print(f'Processing {shape} - {direction}')
+                simulation_check(path, shape, direction)
+
+
+                return buffers   
+    
+
+
+
+    
+    return simulation_check(path, specs, directions)
  
 
 
@@ -970,7 +1008,7 @@ def yield_stress_plot(path,sheet_name,show_r=False):
     tests_series = {s : s.split('_', 2)[1] for s in tests_list}
     directions_ordered = ['RD', '15', '30','DD', '60', '75', 'TD']
 
-    #creat a list containing all directions
+    #create a list containing all directions
     directions = list(set(tests_series.values()))
     geo_name = tests_list[0].split("_",1)[0]
 
@@ -1106,6 +1144,49 @@ def yield_stress_plot(path,sheet_name,show_r=False):
     buffer.seek(0)  # Reset buffer's position to the start
     return buffer.getvalue()    
  ################
+    
+def equiv_calc(path,angle1,angle2):
+    from scipy.integrate import cumulative_trapezoid
+    from scipy.interpolate import interp1d
+    from scipy.optimize import curve_fit
+    data_frame = pd.read_excel(path, header=[0,1,2], index_col=0)
+
+
+    stress_ref = data_frame[f'SDB_{angle1}_1']['Calculation']['True stress'].dropna()  # true stress
+    strain_ref = data_frame[f'SDB_{angle1}_1']['Calculation']['Y True strain'].dropna()  # true strain
+
+
+    ref_work = cumulative_trapezoid(strain_ref, stress_ref, initial=0)
+
+
+    # get strain from refrence work by using inverse
+    work_ref_interp = interp1d(ref_work, strain_ref, bounds_error=False, fill_value="extrapolate")
+
+
+
+    strain_theta = data_frame[f'SDB_{angle2}_1']['Calculation']['Y True strain'].dropna().values
+    stress_theta = data_frame[f'SDB_{angle2}_1']['Calculation']['True stress'].dropna().values
+    work_theta = cumulative_trapezoid(strain_theta, stress_theta, initial=0)
+
+    strain_eq_theta = work_ref_interp(work_theta)
+
+
+    plt.figure(figsize=(10, 6))
+
+    plt.plot(strain_ref, stress_ref, 'b-', label=f"{angle1}")
+    plt.plot(strain_theta, stress_theta, 'g--', label=f"Raw {angle2}")
+    plt.plot(strain_eq_theta, stress_theta, 'r-', label=f"Work-equivalent {angle2}")
+    plt.xlabel("Equivalent Plastic Strain")
+    plt.ylabel("True Stress")
+    plt.legend()
+    plt.grid(True)
+
+    buffer = BytesIO()
+   
+    plt.savefig(buffer, format='PNG', bbox_inches='tight')
+    buffer.seek(0)  # Reset buffer's position to the start
+    return buffer.getvalue()    
+
 
 
 
